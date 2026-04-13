@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+*.db
+
+# Node
+node_modules/
+.next/
+
+# Secrets (CRITICAL)
+backend/.env
+backend/client_secret.json
+backend/storage/tokens.json
+
+# OS
+.DS_Store
