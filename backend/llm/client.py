@@ -3,7 +3,6 @@ from pydantic import BaseModel
 
 from config import settings
 from langchain_openai import ChatOpenAI
-from langchain_ollama import ChatOllama
 from langsmith import traceable
 
 StructuredModel = TypeVar("StructuredModel", bound=BaseModel)
@@ -20,6 +19,9 @@ def _get_openai_llm():
 
 
 def _get_ollama_llm():
+    # Lazy import so production does not require langchain_ollama
+    from langchain_ollama import ChatOllama
+
     return ChatOllama(
         model=settings.ollama_model,
         temperature=0,
@@ -33,7 +35,7 @@ def invoke_structured_with_fallback(schema: Type[StructuredModel], prompt: str) 
         llm = _get_openai_llm().with_structured_output(schema)
         return llm.invoke(prompt)
 
-    # Development fallback flow
+    # Development: OpenAI first, then Ollama fallback
     if settings.llm_provider == "openai_first":
         openai_error = None
         try:
