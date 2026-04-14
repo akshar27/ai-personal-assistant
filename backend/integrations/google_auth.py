@@ -9,9 +9,19 @@ SCOPES = [
     "https://www.googleapis.com/auth/calendar",
 ]
 
+
+def _get_client_secret_source() -> str:
+    if settings.google_client_secret_json:
+        path = Path("/tmp/google_client_secret.json")
+        path.write_text(settings.google_client_secret_json)
+        return str(path)
+
+    return settings.google_client_secrets_file
+
+
 def create_flow(state: str | None = None) -> Flow:
     return Flow.from_client_secrets_file(
-        settings.google_client_secrets_file,
+        _get_client_secret_source(),
         scopes=SCOPES,
         redirect_uri=settings.google_redirect_uri,
         state=state,
@@ -20,6 +30,7 @@ def create_flow(state: str | None = None) -> Flow:
 
 def save_tokens(creds: Credentials) -> None:
     token_path = Path(settings.tokens_file)
+    token_path.parent.mkdir(parents=True, exist_ok=True)
     token_path.write_text(creds.to_json())
 
 
