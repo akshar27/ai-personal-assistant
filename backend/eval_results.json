@@ -1,0 +1,628 @@
+[
+  {
+    "name": "email_summary_basic",
+    "input": "summarize my unread emails",
+    "passed": true,
+    "errors": [],
+    "result": {
+      "user_id": "eval_user",
+      "message": "summarize my unread emails",
+      "intent": "email_summary",
+      "reply": "Here are your unread emails:\n1. \ud83c\udf37 Mother's Day sale is live. Support the one who supports everyone. from LiberNovo <official@libernovo.com>\n2. Marina Run Club MRC invited you to a club event from Strava <no-reply@strava.com>\n3. Bar Crawl tomorrow + Startup Grind $100 off from Colton Kaplan <coltonkaplan@user.luma-mail.com>\n4. This is it: $75 off ends soon \ud83d\udc8d from Jostens College <college@jostens.com>\n5. $125 off your summer hotel stay \ud83d\ude0e from Klarna <noreply@hello.klarna.com>\nYou can say something like: reply to email 1 saying I can do next Tuesday afternoon",
+      "tool_used": "gmail",
+      "email_summary": [
+        {
+          "index": 1,
+          "id": "19dd1d185398f5cb",
+          "thread_id": "19dd1d185398f5cb",
+          "subject": "\ud83c\udf37 Mother's Day sale is live. Support the one who supports everyone.",
+          "sender": "LiberNovo <official@libernovo.com>",
+          "snippet": "Three independent recognitions in 2026. Up to 30% off for Mother&#39;s Day. \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f"
+        },
+        {
+          "index": 2,
+          "id": "19dd11e99803e817",
+          "thread_id": "19dd11e99803e817",
+          "subject": "Marina Run Club MRC invited you to a club event",
+          "sender": "Strava <no-reply@strava.com>",
+          "snippet": "Interested? Here are the details. Join Us! Marina Run Club MRC invited you to join MRC Cinco de Mayo Fun Run on Tue, May 5 at 5:30 PM. If you&#39;re interested, get more details and RSVP. View Event"
+        },
+        {
+          "index": 3,
+          "id": "19dd10b3e5a976b1",
+          "thread_id": "19dd10b3e5a976b1",
+          "subject": "Bar Crawl tomorrow + Startup Grind $100 off",
+          "sender": "Colton Kaplan <coltonkaplan@user.luma-mail.com>",
+          "snippet": "Hey all!! We are hosting an official stop on the Startup Grind Bar Crawl tomorrow. The city is full\u2026 Founder &amp; Investor Happy Hour (Startup Grind Bar Crawl) Apr 28, 5:00 PM PDT \u00b7 Register to See"
+        },
+        {
+          "index": 4,
+          "id": "19dd0fbbce99b44d",
+          "thread_id": "19dd0fbbce99b44d",
+          "subject": "This is it: $75 off ends soon \ud83d\udc8d",
+          "sender": "Jostens College <college@jostens.com>",
+          "snippet": "Last call to save on your college ring! \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f"
+        },
+        {
+          "index": 5,
+          "id": "19dd0dd0e6da1c67",
+          "thread_id": "19dd0dd0e6da1c67",
+          "subject": "$125 off your summer hotel stay \ud83d\ude0e",
+          "sender": "Klarna <noreply@hello.klarna.com>",
+          "snippet": "Book at Hotels.com and save big \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c"
+        }
+      ],
+      "unread_emails": [
+        {
+          "index": 1,
+          "id": "19dd1d185398f5cb",
+          "thread_id": "19dd1d185398f5cb",
+          "subject": "\ud83c\udf37 Mother's Day sale is live. Support the one who supports everyone.",
+          "sender": "LiberNovo <official@libernovo.com>",
+          "snippet": "Three independent recognitions in 2026. Up to 30% off for Mother&#39;s Day. \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f"
+        },
+        {
+          "index": 2,
+          "id": "19dd11e99803e817",
+          "thread_id": "19dd11e99803e817",
+          "subject": "Marina Run Club MRC invited you to a club event",
+          "sender": "Strava <no-reply@strava.com>",
+          "snippet": "Interested? Here are the details. Join Us! Marina Run Club MRC invited you to join MRC Cinco de Mayo Fun Run on Tue, May 5 at 5:30 PM. If you&#39;re interested, get more details and RSVP. View Event"
+        },
+        {
+          "index": 3,
+          "id": "19dd10b3e5a976b1",
+          "thread_id": "19dd10b3e5a976b1",
+          "subject": "Bar Crawl tomorrow + Startup Grind $100 off",
+          "sender": "Colton Kaplan <coltonkaplan@user.luma-mail.com>",
+          "snippet": "Hey all!! We are hosting an official stop on the Startup Grind Bar Crawl tomorrow. The city is full\u2026 Founder &amp; Investor Happy Hour (Startup Grind Bar Crawl) Apr 28, 5:00 PM PDT \u00b7 Register to See"
+        },
+        {
+          "index": 4,
+          "id": "19dd0fbbce99b44d",
+          "thread_id": "19dd0fbbce99b44d",
+          "subject": "This is it: $75 off ends soon \ud83d\udc8d",
+          "sender": "Jostens College <college@jostens.com>",
+          "snippet": "Last call to save on your college ring! \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f"
+        },
+        {
+          "index": 5,
+          "id": "19dd0dd0e6da1c67",
+          "thread_id": "19dd0dd0e6da1c67",
+          "subject": "$125 off your summer hotel stay \ud83d\ude0e",
+          "sender": "Klarna <noreply@hello.klarna.com>",
+          "snippet": "Book at Hotels.com and save big \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c"
+        }
+      ],
+      "draft_email": {},
+      "draft_event": {},
+      "approval_required": false,
+      "approval_payload": {},
+      "approved": false,
+      "conflict_found": false,
+      "conflict_details": [],
+      "suggested_event": {},
+      "action_type": "email_summarize",
+      "action_payload": {},
+      "policy_decision": "",
+      "policy_reason": "",
+      "risk_level": ""
+    }
+  },
+  {
+    "name": "remember_preference_basic",
+    "input": "remember I prefer concise emails",
+    "passed": true,
+    "errors": [],
+    "result": {
+      "user_id": "eval_user",
+      "message": "remember I prefer concise emails",
+      "intent": "remember_preference",
+      "reply": "Got it \u2014 I\u2019ll remember: I prefer concise emails",
+      "tool_used": "memory",
+      "draft_email": {},
+      "draft_event": {},
+      "approval_required": false,
+      "approval_payload": {},
+      "approved": false,
+      "conflict_found": false,
+      "conflict_details": [],
+      "suggested_event": {},
+      "action_type": "memory_write",
+      "action_payload": {},
+      "policy_decision": "",
+      "policy_reason": "",
+      "risk_level": ""
+    }
+  },
+  {
+    "name": "draft_email_valid",
+    "input": "draft an email to test@example.com saying thanks for the update",
+    "passed": true,
+    "errors": [],
+    "result": {
+      "user_id": "eval_user",
+      "message": "draft an email to test@example.com saying thanks for the update",
+      "intent": "draft_email",
+      "reply": "Please review and approve this action.",
+      "tool_used": "gmail_prepare_draft",
+      "draft_email": {
+        "to": "test@example.com",
+        "subject": "Update Confirmation",
+        "body": "Thank you for the update. I appreciate your prompt notification."
+      },
+      "draft_event": {},
+      "approval_required": true,
+      "approval_payload": {
+        "action_type": "email_draft",
+        "risk_level": "medium",
+        "reason": "This action changes user-facing state and should be approved.",
+        "payload": {
+          "action": "create_gmail_draft",
+          "draft": {
+            "to": "test@example.com",
+            "subject": "Update Confirmation",
+            "body": "Thank you for the update. I appreciate your prompt notification."
+          }
+        },
+        "timezone": "America/Los_Angeles"
+      },
+      "approved": false,
+      "conflict_found": false,
+      "conflict_details": [],
+      "suggested_event": {},
+      "action_type": "email_draft",
+      "action_payload": {
+        "action": "create_gmail_draft",
+        "draft": {
+          "to": "test@example.com",
+          "subject": "Update Confirmation",
+          "body": "Thank you for the update. I appreciate your prompt notification."
+        }
+      },
+      "policy_decision": "require_approval",
+      "policy_reason": "This action changes user-facing state and should be approved.",
+      "risk_level": "medium",
+      "__interrupt__": [
+        "Interrupt(value={'message': 'Approve this action?', 'payload': {'action_type': 'email_draft', 'risk_level': 'medium', 'reason': 'This action changes user-facing state and should be approved.', 'payload': {'action': 'create_gmail_draft', 'draft': {'to': 'test@example.com', 'subject': 'Update Confirmation', 'body': 'Thank you for the update. I appreciate your prompt notification.'}}, 'timezone': 'America/Los_Angeles'}}, id='1dd4b65a4b9b38a06e0ab94b3e3fe71c')"
+      ]
+    }
+  },
+  {
+    "name": "draft_email_missing_recipient",
+    "input": "draft an email saying thanks for the update",
+    "passed": true,
+    "errors": [],
+    "result": {
+      "user_id": "eval_user",
+      "message": "draft an email saying thanks for the update",
+      "intent": "draft_email",
+      "reply": "I need a bit more information before I do that. I need the recipient email address before I can prepare this draft.",
+      "tool_used": "policy",
+      "draft_email": {
+        "to": "",
+        "subject": "Update Confirmation",
+        "body": "Thank you for the update. I appreciate your prompt notification."
+      },
+      "draft_event": {},
+      "approval_required": false,
+      "approval_payload": {},
+      "approved": false,
+      "conflict_found": false,
+      "conflict_details": [],
+      "suggested_event": {},
+      "action_type": "email_draft",
+      "action_payload": {},
+      "policy_decision": "clarify",
+      "policy_reason": "I need the recipient email address before I can prepare this draft.",
+      "risk_level": "",
+      "pending_clarification_context": {
+        "original_intent": "draft_email",
+        "original_message": "draft an email saying thanks for the update"
+      }
+    }
+  },
+  {
+    "name": "calendar_basic",
+    "input": "schedule meeting tomorrow at 3pm",
+    "passed": true,
+    "errors": [],
+    "result": {
+      "user_id": "eval_user",
+      "message": "schedule meeting tomorrow at 3pm",
+      "intent": "draft_calendar_event",
+      "reply": "Please review and approve this action.",
+      "tool_used": "calendar_prepare_event",
+      "draft_email": {},
+      "draft_event": {
+        "summary": "Tomorrow's Meeting",
+        "start": "2026-04-28T15:00:00",
+        "end": "2026-04-28T15:30:00",
+        "conference_type": "google_meet"
+      },
+      "approval_required": true,
+      "approval_payload": {
+        "action_type": "calendar_create",
+        "risk_level": "medium",
+        "reason": "This action changes user-facing state and should be approved.",
+        "payload": {
+          "action": "create_calendar_event",
+          "event": {
+            "summary": "Tomorrow's Meeting",
+            "start": "2026-04-28T15:00:00",
+            "end": "2026-04-28T15:30:00",
+            "conference_type": "google_meet"
+          }
+        },
+        "timezone": "America/Los_Angeles",
+        "conflict_found": true,
+        "conflict_details": [
+          {
+            "summary": "Tomorrow's Team Meeting",
+            "start": "2026-04-28T15:00:00-07:00",
+            "end": "2026-04-28T15:30:00-07:00"
+          }
+        ],
+        "suggested_event": {
+          "summary": "Tomorrow's Meeting",
+          "start": "2026-04-28T16:00:00",
+          "end": "2026-04-28T16:30:00",
+          "conference_type": "google_meet"
+        }
+      },
+      "approved": false,
+      "conflict_found": true,
+      "conflict_details": [
+        {
+          "summary": "Tomorrow's Team Meeting",
+          "start": "2026-04-28T15:00:00-07:00",
+          "end": "2026-04-28T15:30:00-07:00"
+        }
+      ],
+      "suggested_event": {
+        "summary": "Tomorrow's Meeting",
+        "start": "2026-04-28T16:00:00",
+        "end": "2026-04-28T16:30:00",
+        "conference_type": "google_meet"
+      },
+      "action_type": "calendar_create",
+      "action_payload": {
+        "action": "create_calendar_event",
+        "event": {
+          "summary": "Tomorrow's Meeting",
+          "start": "2026-04-28T15:00:00",
+          "end": "2026-04-28T15:30:00",
+          "conference_type": "google_meet"
+        }
+      },
+      "policy_decision": "require_approval",
+      "policy_reason": "This action changes user-facing state and should be approved.",
+      "risk_level": "medium",
+      "__interrupt__": [
+        "Interrupt(value={'message': 'Approve this action?', 'payload': {'action_type': 'calendar_create', 'risk_level': 'medium', 'reason': 'This action changes user-facing state and should be approved.', 'payload': {'action': 'create_calendar_event', 'event': {'summary': \"Tomorrow's Meeting\", 'start': '2026-04-28T15:00:00', 'end': '2026-04-28T15:30:00', 'conference_type': 'google_meet'}}, 'timezone': 'America/Los_Angeles', 'conflict_found': True, 'conflict_details': [{'summary': \"Tomorrow's Team Meeting\", 'start': '2026-04-28T15:00:00-07:00', 'end': '2026-04-28T15:30:00-07:00'}], 'suggested_event': {'summary': \"Tomorrow's Meeting\", 'start': '2026-04-28T16:00:00', 'end': '2026-04-28T16:30:00', 'conference_type': 'google_meet'}}}, id='5ddd21aa9605a0dbf9429cdca2d622db')"
+      ]
+    }
+  },
+  {
+    "name": "calendar_google_meet",
+    "input": "schedule meeting tomorrow at 3pm with google meet",
+    "passed": false,
+    "errors": [
+      "approval_required mismatch: expected=True actual=False",
+      "policy_decision mismatch: expected=require_approval actual=clarify"
+    ],
+    "result": {
+      "user_id": "eval_user",
+      "message": "schedule meeting tomorrow at 3pm with google meet",
+      "intent": "draft_calendar_event",
+      "reply": "I need a bit more information before I do that. I interpreted the meeting as 2:00 PM, but you mentioned 3:00 PM. Please confirm the intended time.",
+      "tool_used": "policy",
+      "draft_email": {},
+      "draft_event": {
+        "summary": "Tomorrow's Team Discussion",
+        "start": "2026-04-28T14:00:00",
+        "end": "2026-04-28T14:30:00",
+        "conference_type": "google_meet"
+      },
+      "approval_required": false,
+      "approval_payload": {},
+      "approved": false,
+      "conflict_found": false,
+      "conflict_details": [],
+      "suggested_event": {},
+      "action_type": "calendar_create",
+      "action_payload": {},
+      "policy_decision": "clarify",
+      "policy_reason": "I interpreted the meeting as 2:00 PM, but you mentioned 3:00 PM. Please confirm the intended time.",
+      "risk_level": ""
+    }
+  },
+  {
+    "name": "calendar_invalid_time_order",
+    "input": "schedule meeting tomorrow from 5pm to 3pm",
+    "passed": true,
+    "errors": [],
+    "result": {
+      "user_id": "eval_user",
+      "message": "schedule meeting tomorrow from 5pm to 3pm",
+      "intent": "draft_calendar_event",
+      "reply": "I need a bit more information before I do that. I interpreted the meeting as 2:00 PM, but you mentioned 5:00 PM. Please confirm the intended time.",
+      "tool_used": "policy",
+      "draft_email": {},
+      "draft_event": {
+        "summary": "Tomorrow's Meeting",
+        "start": "2026-04-28T14:00:00",
+        "end": "2026-04-28T14:30:00",
+        "conference_type": "none"
+      },
+      "approval_required": false,
+      "approval_payload": {},
+      "approved": false,
+      "conflict_found": false,
+      "conflict_details": [],
+      "suggested_event": {},
+      "action_type": "calendar_create",
+      "action_payload": {},
+      "policy_decision": "clarify",
+      "policy_reason": "I interpreted the meeting as 2:00 PM, but you mentioned 5:00 PM. Please confirm the intended time.",
+      "risk_level": ""
+    }
+  },
+  {
+    "name": "create_task_basic",
+    "input": "remind me to apply to Lyft tonight",
+    "passed": true,
+    "errors": [],
+    "result": {
+      "user_id": "eval_user",
+      "message": "remind me to apply to Lyft tonight",
+      "intent": "create_task",
+      "reply": "Done \u2014 I created task #4: Apply to Lyft. Due: 2026-04-27T20:00:00-07:00",
+      "tool_used": "task",
+      "draft_email": {},
+      "draft_event": {},
+      "approval_required": false,
+      "approval_payload": {},
+      "approved": false,
+      "conflict_found": false,
+      "conflict_details": [],
+      "suggested_event": {},
+      "action_type": "create_task",
+      "action_payload": {},
+      "policy_decision": "",
+      "policy_reason": "",
+      "risk_level": "",
+      "task": {
+        "title": "Apply to Lyft",
+        "due_at": "2026-04-27T20:00:00-07:00",
+        "source": "job_search"
+      },
+      "task_id": 4
+    }
+  },
+  {
+    "name": "list_tasks_basic",
+    "input": "show my tasks",
+    "passed": true,
+    "errors": [],
+    "result": {
+      "user_id": "eval_user",
+      "message": "show my tasks",
+      "intent": "list_tasks",
+      "reply": "Here are your open tasks:\n4. Apply to Lyft \u2014 2026-04-27T20:00:00-07:00",
+      "tool_used": "task",
+      "draft_email": {},
+      "draft_event": {},
+      "approval_required": false,
+      "approval_payload": {},
+      "approved": false,
+      "conflict_found": false,
+      "conflict_details": [],
+      "suggested_event": {},
+      "action_type": "list_tasks",
+      "action_payload": {},
+      "policy_decision": "",
+      "policy_reason": "",
+      "risk_level": "",
+      "tasks": [
+        {
+          "id": 4,
+          "user_id": "eval_user",
+          "title": "Apply to Lyft",
+          "due_at": "2026-04-27T20:00:00-07:00",
+          "status": "open",
+          "source": "job_search",
+          "metadata": "{\"created_from\": \"remind me to apply to Lyft tonight\"}",
+          "created_at": "2026-04-28T02:21:11.397427"
+        }
+      ]
+    }
+  },
+  {
+    "name": "daily_briefing_basic",
+    "input": "give me my daily briefing",
+    "passed": true,
+    "errors": [],
+    "result": {
+      "user_id": "eval_user",
+      "message": "give me my daily briefing",
+      "intent": "daily_briefing",
+      "reply": "Here\u2019s your daily briefing:\n\n\ud83d\udce9 Emails:\nUnread emails: Mother's Day sale from LiberNovo, Bar Crawl event invitation from Strava, $75 off Jostens College offer, and $125 off Klarna hotel stay. \n\n\ud83d\udcc5 Calendar:\nNo events scheduled today.\n\n\ud83d\udccc Follow-ups:\nNo open follow-ups.\n\n\u2705 Tasks:\n- Apply to Lyft \u2014 due 2026-04-27T20:00:00-07:00\n\n\ud83c\udfaf Top priorities:\n1. Apply to Lyft (due 2026-04-27T20:00:00-07:00) \n2. Review unread emails for potential actions\n3. Focus on highest priority task\n\n\ud83e\udde0 Overview:\nToday's briefing is focused on reviewing open tasks and unread emails. With no meetings scheduled, consider dedicating focus time to the top priority task.",
+      "tool_used": "daily_briefing",
+      "email_summary": [
+        {
+          "index": 1,
+          "id": "19dd1d185398f5cb",
+          "thread_id": "19dd1d185398f5cb",
+          "subject": "\ud83c\udf37 Mother's Day sale is live. Support the one who supports everyone.",
+          "sender": "LiberNovo <official@libernovo.com>",
+          "snippet": "Three independent recognitions in 2026. Up to 30% off for Mother&#39;s Day. \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f"
+        },
+        {
+          "index": 2,
+          "id": "19dd11e99803e817",
+          "thread_id": "19dd11e99803e817",
+          "subject": "Marina Run Club MRC invited you to a club event",
+          "sender": "Strava <no-reply@strava.com>",
+          "snippet": "Interested? Here are the details. Join Us! Marina Run Club MRC invited you to join MRC Cinco de Mayo Fun Run on Tue, May 5 at 5:30 PM. If you&#39;re interested, get more details and RSVP. View Event"
+        },
+        {
+          "index": 3,
+          "id": "19dd10b3e5a976b1",
+          "thread_id": "19dd10b3e5a976b1",
+          "subject": "Bar Crawl tomorrow + Startup Grind $100 off",
+          "sender": "Colton Kaplan <coltonkaplan@user.luma-mail.com>",
+          "snippet": "Hey all!! We are hosting an official stop on the Startup Grind Bar Crawl tomorrow. The city is full\u2026 Founder &amp; Investor Happy Hour (Startup Grind Bar Crawl) Apr 28, 5:00 PM PDT \u00b7 Register to See"
+        },
+        {
+          "index": 4,
+          "id": "19dd0fbbce99b44d",
+          "thread_id": "19dd0fbbce99b44d",
+          "subject": "This is it: $75 off ends soon \ud83d\udc8d",
+          "sender": "Jostens College <college@jostens.com>",
+          "snippet": "Last call to save on your college ring! \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f"
+        },
+        {
+          "index": 5,
+          "id": "19dd0dd0e6da1c67",
+          "thread_id": "19dd0dd0e6da1c67",
+          "subject": "$125 off your summer hotel stay \ud83d\ude0e",
+          "sender": "Klarna <noreply@hello.klarna.com>",
+          "snippet": "Book at Hotels.com and save big \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c"
+        }
+      ],
+      "calendar_events": [],
+      "unread_emails": [
+        {
+          "index": 1,
+          "id": "19dd1d185398f5cb",
+          "thread_id": "19dd1d185398f5cb",
+          "subject": "\ud83c\udf37 Mother's Day sale is live. Support the one who supports everyone.",
+          "sender": "LiberNovo <official@libernovo.com>",
+          "snippet": "Three independent recognitions in 2026. Up to 30% off for Mother&#39;s Day. \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f \u034f"
+        },
+        {
+          "index": 2,
+          "id": "19dd11e99803e817",
+          "thread_id": "19dd11e99803e817",
+          "subject": "Marina Run Club MRC invited you to a club event",
+          "sender": "Strava <no-reply@strava.com>",
+          "snippet": "Interested? Here are the details. Join Us! Marina Run Club MRC invited you to join MRC Cinco de Mayo Fun Run on Tue, May 5 at 5:30 PM. If you&#39;re interested, get more details and RSVP. View Event"
+        },
+        {
+          "index": 3,
+          "id": "19dd10b3e5a976b1",
+          "thread_id": "19dd10b3e5a976b1",
+          "subject": "Bar Crawl tomorrow + Startup Grind $100 off",
+          "sender": "Colton Kaplan <coltonkaplan@user.luma-mail.com>",
+          "snippet": "Hey all!! We are hosting an official stop on the Startup Grind Bar Crawl tomorrow. The city is full\u2026 Founder &amp; Investor Happy Hour (Startup Grind Bar Crawl) Apr 28, 5:00 PM PDT \u00b7 Register to See"
+        },
+        {
+          "index": 4,
+          "id": "19dd0fbbce99b44d",
+          "thread_id": "19dd0fbbce99b44d",
+          "subject": "This is it: $75 off ends soon \ud83d\udc8d",
+          "sender": "Jostens College <college@jostens.com>",
+          "snippet": "Last call to save on your college ring! \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f \u200c \u034f"
+        },
+        {
+          "index": 5,
+          "id": "19dd0dd0e6da1c67",
+          "thread_id": "19dd0dd0e6da1c67",
+          "subject": "$125 off your summer hotel stay \ud83d\ude0e",
+          "sender": "Klarna <noreply@hello.klarna.com>",
+          "snippet": "Book at Hotels.com and save big \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c"
+        }
+      ],
+      "draft_email": {},
+      "draft_event": {},
+      "approval_required": false,
+      "approval_payload": {},
+      "approved": false,
+      "conflict_found": false,
+      "conflict_details": [],
+      "suggested_event": {},
+      "action_type": "daily_briefing",
+      "action_payload": {},
+      "policy_decision": "",
+      "policy_reason": "",
+      "risk_level": "",
+      "daily_briefing": {
+        "email_summary": "Unread emails: Mother's Day sale from LiberNovo, Bar Crawl event invitation from Strava, $75 off Jostens College offer, and $125 off Klarna hotel stay. ",
+        "calendar_summary": "No events scheduled today.",
+        "follow_ups": [],
+        "tasks": [
+          "Apply to Lyft \u2014 due 2026-04-27T20:00:00-07:00"
+        ],
+        "priorities": "1. Apply to Lyft (due 2026-04-27T20:00:00-07:00) \n2. Review unread emails for potential actions\n3. Focus on highest priority task",
+        "overall_brief": "Today's briefing is focused on reviewing open tasks and unread emails. With no meetings scheduled, consider dedicating focus time to the top priority task."
+      },
+      "briefing_ready": true
+    }
+  },
+  {
+    "name": "meeting_prep_basic",
+    "input": "prep me for my next meeting",
+    "passed": true,
+    "errors": [],
+    "result": {
+      "user_id": "eval_user",
+      "message": "prep me for my next meeting",
+      "intent": "meeting_prep",
+      "reply": "Here\u2019s your prep for the next meeting:\n\n\ud83d\udcc5 Meeting:\nTomorrow's Team Meeting \u2014 Apr 28, 3:00 PM \u2013 3:30 PM\n\n\ud83d\udd17 Link:\nhttps://meet.google.com/nit-xqwf-utd\n\n\ud83e\udde0 Context:\nTeam meeting\n\n\ud83d\udcac Talking points:\n- Project updates\n- Open tasks discussion\n- Upcoming deadlines\n\n\u2705 Suggested actions:\n- Review your open tasks, including the Lyft application due tomorrow\n- Prepare to discuss any blockers or challenges you're facing in your current projects\n- Update your team on your progress and any new developments",
+      "tool_used": "meeting_prep",
+      "draft_email": {},
+      "draft_event": {},
+      "approval_required": false,
+      "approval_payload": {},
+      "approved": false,
+      "conflict_found": false,
+      "conflict_details": [],
+      "suggested_event": {},
+      "action_type": "meeting_prep",
+      "action_payload": {},
+      "policy_decision": "",
+      "policy_reason": "",
+      "risk_level": "",
+      "upcoming_events": [
+        {
+          "id": "mhhviqseqn602dk6ajl3ub8qkg",
+          "summary": "Tomorrow's Team Meeting",
+          "start": "2026-04-28T15:00:00-07:00",
+          "end": "2026-04-28T15:30:00-07:00",
+          "location": "",
+          "description": "",
+          "htmlLink": "https://www.google.com/calendar/event?eid=bWhodmlxc2VxbjYwMmRrNmFqbDN1Yjhxa2cgYWtzaGFyZ290aGk3MEBt",
+          "meetLink": "https://meet.google.com/nit-xqwf-utd",
+          "attendees": []
+        }
+      ],
+      "next_meeting": {
+        "id": "mhhviqseqn602dk6ajl3ub8qkg",
+        "summary": "Tomorrow's Team Meeting",
+        "start": "2026-04-28T15:00:00-07:00",
+        "end": "2026-04-28T15:30:00-07:00",
+        "location": "",
+        "description": "",
+        "htmlLink": "https://www.google.com/calendar/event?eid=bWhodmlxc2VxbjYwMmRrNmFqbDN1Yjhxa2cgYWtzaGFyZ290aGk3MEBt",
+        "meetLink": "https://meet.google.com/nit-xqwf-utd",
+        "attendees": []
+      },
+      "meeting_prep": {
+        "meeting_summary": "Tomorrow's Team Meeting is likely about discussing ongoing projects and team progress.",
+        "context": "Team meeting",
+        "talking_points": [
+          "Project updates",
+          "Open tasks discussion",
+          "Upcoming deadlines"
+        ],
+        "suggested_actions": [
+          "Review your open tasks, including the Lyft application due tomorrow",
+          "Prepare to discuss any blockers or challenges you're facing in your current projects",
+          "Update your team on your progress and any new developments"
+        ]
+      },
+      "meeting_prep_ready": true
+    }
+  }
+]
