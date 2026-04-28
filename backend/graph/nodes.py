@@ -632,9 +632,6 @@ Instructions:
             "tool_used": "calendar_prepare_event",
         }
 
-    print("RAW CALENDAR EXTRACTION:", result)
-    print("EVENT PAYLOAD:", event_payload)
-
     return {
         "draft_event": event_payload,
         "action_payload": {
