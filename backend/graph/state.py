@@ -56,3 +56,7 @@ class AssistantState(TypedDict, total=False):
     history_hits: List[dict]
     history_injection_flagged: bool
     history_injection_reasons: List[str]
+
+    # Set when untrusted content in this turn looked like a prompt injection
+    untrusted_injection_detected: bool
+    untrusted_injection_reasons: List[str]

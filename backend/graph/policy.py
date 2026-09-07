@@ -45,6 +45,21 @@ def evaluate_policy(
     context = context or {}
     risk = ACTION_RISK_MAP.get(action_type, RiskLevel.MEDIUM)
 
+    # Defense in depth: if untrusted content in this turn looked like an injected
+    # instruction, an action that would normally be auto-allowed needs a human.
+    if context.get("untrusted_injection") and action_type in {
+        ActionType.EMAIL_SUMMARIZE,
+        ActionType.MEMORY_WRITE,
+    }:
+        return {
+            "decision": PolicyDecision.REQUIRE_APPROVAL,
+            "risk": RiskLevel.HIGH,
+            "reason": (
+                "Untrusted content in this request looked like an attempt to "
+                "give instructions, so I'm asking you to confirm before acting."
+            ),
+        }
+
     if action_type == ActionType.EMAIL_SUMMARIZE:
         return {
             "decision": PolicyDecision.ALLOW,
