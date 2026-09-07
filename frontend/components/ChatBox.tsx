@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import MessageList, { Message } from "./MessageList";
-import { sendApproval, sendChatStream, getGoogleAuthUrl } from "../lib/api";
+import { sendApproval, sendChatStream, getGoogleAuthUrl, indexHistory } from "../lib/api";
 
 const samplePrompts = [
   "summarize my unread emails",
@@ -10,6 +10,7 @@ const samplePrompts = [
   "remember I prefer concise emails",
   "Write a polite follow-up email to akshargothi70@gmail.com about my interview",
   "create event tomorrow at 2pm called Project Sync",
+  "what did the last email from my manager say",
 ];
 
 function getOrCreateThreadId(): string {
@@ -35,6 +36,8 @@ export default function ChatBox() {
   ]);
   const [loading, setLoading] = useState(false);
   const [approvalLoading, setApprovalLoading] = useState(false);
+  const [indexing, setIndexing] = useState(false);
+  const [indexNote, setIndexNote] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -114,6 +117,24 @@ export default function ChatBox() {
       patchLast({ text: `Error: ${error instanceof Error ? error.message : String(error)}` });
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleIndexHistory() {
+    setIndexing(true);
+    setIndexNote(null);
+    try {
+      const r = await indexHistory(threadId);
+      setIndexNote(
+        `Indexed ${r.messages_indexed} new email(s) (${r.chunks_added} chunks). ` +
+          `Now ask about anything in your mail.`,
+      );
+    } catch (error) {
+      setIndexNote(
+        `Couldn't index email: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    } finally {
+      setIndexing(false);
     }
   }
 
@@ -230,10 +251,25 @@ export default function ChatBox() {
 
             <button
               onClick={startNewChat}
-              className="mb-6 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-center font-medium text-slate-800 transition hover:bg-slate-50"
+              className="mb-3 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-center font-medium text-slate-800 transition hover:bg-slate-50"
             >
               New Chat
             </button>
+
+            <button
+              onClick={handleIndexHistory}
+              disabled={indexing}
+              className="mb-2 w-full rounded-2xl border border-indigo-300 bg-indigo-50 px-4 py-3 text-center font-medium text-indigo-700 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {indexing ? "Indexing email…" : "Index email history"}
+            </button>
+
+            {indexNote && (
+              <div className="mb-6 rounded-2xl bg-slate-100 px-4 py-3 text-xs leading-5 text-slate-600">
+                {indexNote}
+              </div>
+            )}
+            {!indexNote && <div className="mb-6" />}
 
             {googleConnected && (
               <div className="mb-6 rounded-2xl bg-green-100 px-4 py-3 text-sm font-medium text-green-800">

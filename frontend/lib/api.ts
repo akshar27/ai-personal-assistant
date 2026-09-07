@@ -55,6 +55,27 @@ export function getGoogleAuthUrl(): string {
   return `${API_BASE}/auth/google/start`;
 }
 
+export type HistoryIndexResult = {
+  status: string;
+  messages_seen: number;
+  messages_indexed: number;
+  chunks_added: number;
+  skipped_already_indexed: number;
+};
+
+/** POST /history/index — pull recent Gmail into the retrieval index. */
+export async function indexHistory(userId: string): Promise<HistoryIndexResult> {
+  const res = await fetch(`${API_BASE}/history/index`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userId }),
+  });
+  if (!res.ok) {
+    throw new Error(await res.text());
+  }
+  return res.json();
+}
+
 type StreamHandlers = {
   onToken: (t: string) => void;
   onFinal: (r: ChatResponse) => void;
