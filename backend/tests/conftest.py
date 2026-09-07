@@ -20,19 +20,21 @@ os.environ["LANGSMITH_API_KEY"] = ""  # present-but-empty so load_dotenv won't f
 
 @pytest.fixture(autouse=True)
 def temp_memory_db(tmp_path, monkeypatch):
-    """Point the memory + history stores at fresh SQLite files for each test."""
+    """Point the relational DB + history store at fresh SQLite files per test."""
     from config import settings
     from graph import memory
+    from db.engine import reset_engine
 
-    db_file = tmp_path / "memory.db"
-    monkeypatch.setattr(settings, "memory_db_file", str(db_file))
+    monkeypatch.setattr(settings, "database_url", f"sqlite:///{tmp_path / 'app.db'}")
     monkeypatch.setattr(settings, "history_index_db_file", str(tmp_path / "history.db"))
+    reset_engine()
 
     import retrieval.store as store_mod
     monkeypatch.setattr(store_mod, "_default_store", None)
 
     memory.init_memory()
-    yield db_file
+    yield
+    reset_engine()
 
 
 # A deterministic stand-in for real embeddings: hashes tokens into a fixed-width
@@ -94,6 +96,26 @@ def fake_llm(monkeypatch):
     fake.text = "OK."
     monkeypatch.setattr("graph.nodes.invoke_text_with_fallback", lambda prompt: fake.text)
     return fake
+
+
+@pytest.fixture
+def test_user():
+    from auth.users import User
+    return User(id="u1", email="u1@example.com", name="Test User", is_guest=False)
+
+
+@pytest.fixture
+def client(fake_llm, fake_google, test_user):
+    """TestClient with the auth dependency overridden to `test_user`."""
+    from fastapi.testclient import TestClient
+    import app as app_module
+    from auth.deps import current_user, current_user_optional
+
+    app_module.app.dependency_overrides[current_user] = lambda: test_user
+    app_module.app.dependency_overrides[current_user_optional] = lambda: test_user
+    with TestClient(app_module.app) as c:
+        yield c
+    app_module.app.dependency_overrides.clear()
 
 
 @pytest.fixture

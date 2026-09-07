@@ -1,115 +1,77 @@
-import sqlite3
+"""Preferences + tasks, on the SQLAlchemy Core engine (`db.engine`).
+
+Public API and return shapes are unchanged from the old raw-sqlite3 version, so
+graph nodes and tests didn't have to move.
+"""
+
 import json
 from datetime import datetime, timezone
 
-from config import settings
+from sqlalchemy import and_, insert, select, update
+
+from db.engine import get_engine
+from db.tables import preferences, tasks
 
 
 def _now_utc_iso() -> str:
-    """Current UTC time as a naive ISO string (no offset suffix), matching how
+    """Current UTC time as a naive ISO string (no offset), matching how
     due_at / created_at have always been stored."""
     return datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
 
 
-def get_connection():
-    conn = sqlite3.connect(settings.memory_db_file)
-    conn.row_factory = sqlite3.Row
-    return conn
+def init_memory() -> None:
+    """Create tables if they don't exist (dev / tests). Production runs Alembic."""
+    from db.tables import create_all
 
-
-def init_memory():
-    conn = get_connection()
-    cur = conn.cursor()
-
-    # Preferences table
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS preferences (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id TEXT NOT NULL,
-            key TEXT NOT NULL,
-            value TEXT NOT NULL
-        )
-    """)
-
-    # Tasks table
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS tasks (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id TEXT NOT NULL,
-            title TEXT NOT NULL,
-            due_at TEXT,
-            status TEXT NOT NULL DEFAULT 'open',
-            source TEXT DEFAULT 'manual',
-            metadata TEXT,
-            created_at TEXT NOT NULL
-        )
-    """)
-
-    conn.commit()
-    conn.close()
+    create_all()
 
 
 # =========================
 # Preferences
 # =========================
 
-def save_preference(user_id: str, key: str, value: str):
-    conn = get_connection()
-    cur = conn.cursor()
-
-    cur.execute(
-        "INSERT INTO preferences (user_id, key, value) VALUES (?, ?, ?)",
-        (user_id, key, value),
-    )
-
-    conn.commit()
-    conn.close()
+def save_preference(user_id: str, key: str, value: str) -> None:
+    with get_engine().begin() as conn:
+        conn.execute(insert(preferences).values(user_id=user_id, key=key, value=value))
 
 
 def get_preferences(user_id: str):
-    conn = get_connection()
-    cur = conn.cursor()
-
-    cur.execute(
-        """
-        SELECT key, value
-        FROM preferences
-        WHERE user_id = ?
-        ORDER BY id DESC
-        """,
-        (user_id,),
+    stmt = (
+        select(preferences.c.key, preferences.c.value)
+        .where(preferences.c.user_id == user_id)
+        .order_by(preferences.c.id.desc())
     )
-
-    rows = cur.fetchall()
-    conn.close()
-
-    return [{"key": row["key"], "value": row["value"]} for row in rows]
+    with get_engine().connect() as conn:
+        return [{"key": r.key, "value": r.value} for r in conn.execute(stmt)]
 
 
 def get_latest_preference_value(user_id: str, key: str):
-    conn = get_connection()
-    cur = conn.cursor()
-
-    cur.execute(
-        """
-        SELECT value
-        FROM preferences
-        WHERE user_id = ? AND key = ?
-        ORDER BY id DESC
-        LIMIT 1
-        """,
-        (user_id, key),
+    stmt = (
+        select(preferences.c.value)
+        .where(and_(preferences.c.user_id == user_id, preferences.c.key == key))
+        .order_by(preferences.c.id.desc())
+        .limit(1)
     )
-
-    row = cur.fetchone()
-    conn.close()
-
-    return row["value"] if row else None
+    with get_engine().connect() as conn:
+        row = conn.execute(stmt).first()
+    return row.value if row else None
 
 
 # =========================
 # Tasks
 # =========================
+
+def _task_row_to_dict(row) -> dict:
+    d = dict(row._mapping)
+    # keep the historical key name
+    d["metadata"] = d.pop("task_metadata", None) or {}
+    if isinstance(d["metadata"], str):
+        try:
+            d["metadata"] = json.loads(d["metadata"])
+        except ValueError:
+            d["metadata"] = {}
+    return d
+
 
 def create_task(
     user_id: str,
@@ -117,130 +79,66 @@ def create_task(
     due_at: str = None,
     source: str = "manual",
     metadata: dict = None,
-):
-    conn = get_connection()
-    cur = conn.cursor()
-
-    created_at = _now_utc_iso()
-    metadata_json = json.dumps(metadata or {})
-
-    cur.execute(
-        """
-        INSERT INTO tasks (
-            user_id,
-            title,
-            due_at,
-            status,
-            source,
-            metadata,
-            created_at
+) -> int:
+    with get_engine().begin() as conn:
+        result = conn.execute(
+            insert(tasks).values(
+                user_id=user_id,
+                title=title,
+                due_at=due_at,
+                status="open",
+                source=source,
+                task_metadata=metadata or {},
+                created_at=_now_utc_iso(),
+            )
         )
-        VALUES (?, ?, ?, 'open', ?, ?, ?)
-        """,
-        (
-            user_id,
-            title,
-            due_at,
-            source,
-            metadata_json,
-            created_at,
-        ),
-    )
-
-    task_id = cur.lastrowid
-
-    conn.commit()
-    conn.close()
-
-    return task_id
+    return int(result.inserted_primary_key[0])
 
 
 def get_open_tasks(user_id: str):
-    conn = get_connection()
-    cur = conn.cursor()
-
-    cur.execute(
-        """
-        SELECT *
-        FROM tasks
-        WHERE user_id = ?
-          AND status = 'open'
-        ORDER BY
-          CASE WHEN due_at IS NULL THEN 1 ELSE 0 END,
-          due_at ASC,
-          id DESC
-        """,
-        (user_id,),
+    stmt = (
+        select(tasks)
+        .where(and_(tasks.c.user_id == user_id, tasks.c.status == "open"))
+        .order_by(
+            (tasks.c.due_at.is_(None)).asc(),  # nulls last
+            tasks.c.due_at.asc(),
+            tasks.c.id.desc(),
+        )
     )
-
-    rows = cur.fetchall()
-    conn.close()
-
-    return [dict(row) for row in rows]
+    with get_engine().connect() as conn:
+        return [_task_row_to_dict(r) for r in conn.execute(stmt)]
 
 
 def get_due_tasks(user_id: str):
-    conn = get_connection()
-    cur = conn.cursor()
-
     now = _now_utc_iso()
-
-    cur.execute(
-        """
-        SELECT *
-        FROM tasks
-        WHERE user_id = ?
-          AND status = 'open'
-          AND due_at IS NOT NULL
-          AND due_at <= ?
-        ORDER BY due_at ASC
-        """,
-        (user_id, now),
+    stmt = (
+        select(tasks)
+        .where(
+            and_(
+                tasks.c.user_id == user_id,
+                tasks.c.status == "open",
+                tasks.c.due_at.is_not(None),
+                tasks.c.due_at <= now,
+            )
+        )
+        .order_by(tasks.c.due_at.asc())
     )
-
-    rows = cur.fetchall()
-    conn.close()
-
-    return [dict(row) for row in rows]
+    with get_engine().connect() as conn:
+        return [_task_row_to_dict(r) for r in conn.execute(stmt)]
 
 
-def mark_task_done(user_id: str, task_id: int):
-    conn = get_connection()
-    cur = conn.cursor()
-
-    cur.execute(
-        """
-        UPDATE tasks
-        SET status = 'done'
-        WHERE user_id = ?
-          AND id = ?
-        """,
-        (user_id, task_id),
-    )
-
-    updated = cur.rowcount
-
-    conn.commit()
-    conn.close()
-
-    return updated > 0
+def mark_task_done(user_id: str, task_id: int) -> bool:
+    with get_engine().begin() as conn:
+        result = conn.execute(
+            update(tasks)
+            .where(and_(tasks.c.user_id == user_id, tasks.c.id == task_id))
+            .values(status="done")
+        )
+    return result.rowcount > 0
 
 
 def get_task_by_id(user_id: str, task_id: int):
-    conn = get_connection()
-    cur = conn.cursor()
-
-    cur.execute(
-        """
-        SELECT *
-        FROM tasks
-        WHERE user_id = ?
-          AND id = ?
-        """,
-        (user_id, task_id),
-    )
-
-    row = cur.fetchone()
-    conn.close()
-
-    return dict(row) if row else None
+    stmt = select(tasks).where(and_(tasks.c.user_id == user_id, tasks.c.id == task_id))
+    with get_engine().connect() as conn:
+        row = conn.execute(stmt).first()
+    return _task_row_to_dict(row) if row else None

@@ -1,6 +1,12 @@
+import logging
+
 from langgraph.graph import StateGraph, END
 from langgraph.types import interrupt
 from langgraph.checkpoint.memory import InMemorySaver
+
+from config import settings
+
+logger = logging.getLogger("ai_assistant.graph")
 
 from graph.state import AssistantState
 from graph.nodes import (
@@ -172,7 +178,24 @@ def route_after_calendar_tool(state: AssistantState) -> str:
         return "prepare_daily_briefing"
     return "calendar_response"
 
-def build_graph():
+def _default_checkpointer():
+    """Postgres-backed durable state in production, in-memory otherwise so
+    local dev and the test suite need no database for conversation state."""
+    if not settings.is_postgres:
+        return InMemorySaver()
+
+    from langgraph.checkpoint.postgres import PostgresSaver
+    from psycopg_pool import ConnectionPool
+
+    dsn = settings.database_url.replace("postgresql+psycopg://", "postgresql://")
+    pool = ConnectionPool(conninfo=dsn, max_size=10, kwargs={"autocommit": True}, open=True)
+    saver = PostgresSaver(pool)
+    saver.setup()
+    logger.info("using PostgresSaver for graph checkpoints")
+    return saver
+
+
+def build_graph(checkpointer=None):
     graph = StateGraph(AssistantState)
 
     graph.add_node("detect_intent", detect_intent)
@@ -351,5 +374,4 @@ def build_graph():
     graph.add_edge("complete_task", END)
     graph.add_edge("meeting_prep_response", END)
 
-    checkpointer = InMemorySaver()
-    return graph.compile(checkpointer=checkpointer)
+    return graph.compile(checkpointer=checkpointer or _default_checkpointer())

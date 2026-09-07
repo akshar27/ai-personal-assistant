@@ -1,14 +1,3 @@
-import pytest
-from fastapi.testclient import TestClient
-
-
-@pytest.fixture
-def client(fake_llm, fake_google):
-    # import after fixtures patch the graph collaborators
-    import app as app_module
-    return TestClient(app_module.app)
-
-
 def test_health(client):
     r = client.get("/health")
     assert r.status_code == 200

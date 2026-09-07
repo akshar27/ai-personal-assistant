@@ -91,11 +91,14 @@ def main():
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO)
+    from auth.context import user_scope
+
     store = get_store()
-    stats = ingest_user_history(
-        args.user, max_messages=args.max_messages, query=args.query,
-        store=store, reindex=args.reindex,
-    )
+    with user_scope(args.user):
+        stats = ingest_user_history(
+            args.user, max_messages=args.max_messages, query=args.query,
+            store=store, reindex=args.reindex,
+        )
     print(stats)
 
 

@@ -58,8 +58,20 @@ class Settings(BaseModel):
         "http://localhost:3000",
     )
 
-    tokens_file: str = str(STORAGE_DIR / "tokens.json")
-    memory_db_file: str = str(STORAGE_DIR / "memory.db")
+    # Relational store (users, preferences, tasks, google tokens). SQLite for
+    # local/dev/tests; a postgresql:// URL in production.
+    database_url: str = os.getenv("DATABASE_URL", f"sqlite:///{STORAGE_DIR / 'app.db'}")
+
+    # Encrypts per-user Google tokens at rest. Generate:
+    #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    token_encryption_key: str | None = os.getenv("TOKEN_ENCRYPTION_KEY")
+
+    tokens_file: str = str(STORAGE_DIR / "tokens.json")  # legacy single-user fallback
+    memory_db_file: str = str(STORAGE_DIR / "memory.db")  # legacy; unused after DB migration
+
+    @property
+    def is_postgres(self) -> bool:
+        return self.database_url.startswith(("postgres://", "postgresql://", "postgresql+"))
 
     @property
     def is_production(self) -> bool:

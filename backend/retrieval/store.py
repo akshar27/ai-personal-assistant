@@ -207,13 +207,133 @@ class SqliteVectorStore(VectorStore):
         return {r[0] for r in rows}
 
 
+class PgVectorStore(VectorStore):
+    """Postgres + pgvector. Same interface as SqliteVectorStore; cosine search
+    is an HNSW index scan (`embedding <=> query`) instead of a full NumPy pass."""
+
+    def __init__(self, dsn: str | None = None):
+        self._dsn = dsn
+
+    def _connect(self):
+        import psycopg
+        from pgvector.psycopg import register_vector
+
+        dsn = (self._dsn or settings.database_url).replace("postgresql+psycopg://", "postgresql://")
+        conn = psycopg.connect(dsn, autocommit=True)
+        register_vector(conn)
+        return conn
+
+    def init(self) -> None:
+        with self._connect() as conn:
+            conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
+            conn.execute(
+                f"""
+                CREATE TABLE IF NOT EXISTS email_chunks (
+                    id           BIGSERIAL PRIMARY KEY,
+                    user_id      TEXT NOT NULL,
+                    message_id   TEXT NOT NULL,
+                    thread_id    TEXT,
+                    sender       TEXT,
+                    subject      TEXT,
+                    sent_at      TEXT,
+                    chunk_index  INTEGER NOT NULL,
+                    text         TEXT NOT NULL,
+                    embedding    vector({EMBEDDING_DIM}) NOT NULL,
+                    indexed_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+                )
+                """
+            )
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_email_chunks_user ON email_chunks(user_id)")
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_email_chunks_msg ON email_chunks(user_id, message_id)"
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_email_chunks_ann "
+                "ON email_chunks USING hnsw (embedding vector_cosine_ops)"
+            )
+
+    def delete_message(self, user_id: str, message_id: str) -> int:
+        with self._connect() as conn:
+            cur = conn.execute(
+                "DELETE FROM email_chunks WHERE user_id = %s AND message_id = %s",
+                (user_id, message_id),
+            )
+            return cur.rowcount
+
+    def add_chunks(self, chunks: list[Chunk]) -> int:
+        if not chunks:
+            return 0
+        import numpy as np
+
+        rows = []
+        for c in chunks:
+            if len(c.embedding) != EMBEDDING_DIM:
+                raise ValueError(f"embedding dim {len(c.embedding)} != expected {EMBEDDING_DIM}")
+            rows.append(
+                (c.user_id, c.message_id, c.thread_id, c.sender, c.subject, c.sent_at,
+                 c.chunk_index, c.text, np.asarray(c.embedding, dtype=np.float32))
+            )
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.executemany(
+                    """
+                    INSERT INTO email_chunks
+                        (user_id, message_id, thread_id, sender, subject, sent_at,
+                         chunk_index, text, embedding)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    rows,
+                )
+        return len(rows)
+
+    def search(self, user_id: str, query_vector: list[float], k: int = 6) -> list[SearchHit]:
+        import numpy as np
+
+        q = np.asarray(query_vector, dtype=np.float32)
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT message_id, thread_id, sender, subject, sent_at, chunk_index,
+                       text, 1 - (embedding <=> %s) AS score
+                FROM email_chunks
+                WHERE user_id = %s
+                ORDER BY embedding <=> %s
+                LIMIT %s
+                """,
+                (q, user_id, q, k),
+            ).fetchall()
+        return [
+            SearchHit(
+                message_id=r[0], thread_id=r[1], sender=r[2], subject=r[3], sent_at=r[4],
+                chunk_index=r[5], text=r[6], score=float(r[7]),
+            )
+            for r in rows
+        ]
+
+    def count(self, user_id: str) -> int:
+        with self._connect() as conn:
+            return int(
+                conn.execute(
+                    "SELECT COUNT(*) FROM email_chunks WHERE user_id = %s", (user_id,)
+                ).fetchone()[0]
+            )
+
+    def indexed_message_ids(self, user_id: str) -> set[str]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT DISTINCT message_id FROM email_chunks WHERE user_id = %s", (user_id,)
+            ).fetchall()
+        return {r[0] for r in rows}
+
+
 _default_store: VectorStore | None = None
 
 
 def get_store() -> VectorStore:
-    """Process-wide default store. Tests can pass their own instance instead."""
+    """Process-wide default store — PgVectorStore when DATABASE_URL is Postgres,
+    otherwise a local SQLite store. Tests pass their own instance instead."""
     global _default_store
     if _default_store is None:
-        _default_store = SqliteVectorStore()
+        _default_store = PgVectorStore() if settings.is_postgres else SqliteVectorStore()
         _default_store.init()
     return _default_store

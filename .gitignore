@@ -27,3 +27,6 @@ backend/eval_results.json
 # OS / IDE
 .DS_Store
 .idea/
+
+# alembic
+backend/alembic/versions/__pycache__/

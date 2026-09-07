@@ -1,14 +1,5 @@
 import json
 
-import pytest
-from fastapi.testclient import TestClient
-
-
-@pytest.fixture
-def client(fake_llm, fake_google):
-    import app as app_module
-    return TestClient(app_module.app)
-
 
 def sse_events(text: str) -> list[dict]:
     out = []

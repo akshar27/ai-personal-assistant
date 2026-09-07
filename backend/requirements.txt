@@ -5,10 +5,20 @@ pydantic
 itsdangerous
 
 langgraph
+langgraph-checkpoint-sqlite
+langgraph-checkpoint-postgres
 langchain-core
 langchain-openai
 langsmith
 numpy
+
+# Persistence: SQLite locally, Postgres + pgvector in production (DATABASE_URL)
+SQLAlchemy>=2.0
+alembic
+psycopg[binary]
+psycopg-pool
+pgvector
+cryptography
 
 google-auth
 google-auth-oauthlib
