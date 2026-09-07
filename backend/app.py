@@ -1,8 +1,9 @@
+import json
 import logging
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, StreamingResponse
 from starlette.middleware.sessions import SessionMiddleware
 from langgraph.types import Command
 
@@ -105,11 +106,7 @@ def _run_graph(user_id: str, payload) -> dict:
         }
 
 
-@app.post("/chat", response_model=ChatResponse)
-def chat(req: ChatRequest):
-    result = _run_graph(req.user_id, {"user_id": req.user_id, "message": req.message})
-    logger.debug("graph result: %s", result)
-
+def _build_chat_response(result: dict) -> ChatResponse:
     if result.get("approval_required") and result.get("approval_payload"):
         return ChatResponse(
             reply="Approval required before I take this action.",
@@ -120,11 +117,8 @@ def chat(req: ChatRequest):
         )
 
     if "__interrupt__" in result:
-        interrupts = result["__interrupt__"]
-        interrupt_value = None
-        if interrupts:
-            first = interrupts[0]
-            interrupt_value = getattr(first, "value", first)
+        interrupts = result["__interrupt__"] or []
+        interrupt_value = getattr(interrupts[0], "value", None) if interrupts else None
         return ChatResponse(
             reply="Approval required before I take this action.",
             intent=result.get("intent", "draft_email"),
@@ -140,6 +134,64 @@ def chat(req: ChatRequest):
         requires_approval=False,
         approval_payload=None,
     )
+
+
+@app.post("/chat", response_model=ChatResponse)
+def chat(req: ChatRequest):
+    result = _run_graph(req.user_id, {"user_id": req.user_id, "message": req.message})
+    logger.debug("graph result: %s", result)
+    return _build_chat_response(result)
+
+
+def _sse(data: dict) -> str:
+    return f"data: {json.dumps(data)}\n\n"
+
+
+@app.post("/chat/stream")
+def chat_stream(req: ChatRequest):
+    """Same as /chat, but streams the assistant's conversational reply token by
+    token over Server-Sent Events. Tool results and approval payloads arrive in a
+    single terminal `final` event."""
+
+    def gen():
+        config = {"configurable": {"thread_id": req.user_id}}
+        final_state: dict = {}
+        try:
+            for mode, chunk in graph.stream(
+                {"user_id": req.user_id, "message": req.message},
+                config=config,
+                stream_mode=["messages", "values"],
+            ):
+                if mode == "messages":
+                    msg, meta = chunk
+                    if meta.get("langgraph_node") == "chat_response":
+                        token = getattr(msg, "content", "")
+                        if token:
+                            yield _sse({"type": "token", "content": token})
+                elif mode == "values":
+                    final_state = chunk
+        except RuntimeError as e:
+            logger.warning("stream runtime error for user=%s: %s", req.user_id, e)
+            yield _sse({"type": "final", **ChatResponse(
+                reply=str(e), intent="error", requires_approval=False).model_dump()})
+            return
+        except Exception:
+            logger.exception("stream failed for user=%s", req.user_id)
+            yield _sse({"type": "final", **ChatResponse(
+                reply="Something went wrong. Please try again.", intent="error",
+                requires_approval=False).model_dump()})
+            return
+
+        # merge interrupt info (present on the state snapshot after a pause)
+        snapshot = graph.get_state(config)
+        if snapshot.tasks:
+            interrupts = [i for t in snapshot.tasks for i in (t.interrupts or [])]
+            if interrupts:
+                final_state = {**final_state, "__interrupt__": interrupts}
+
+        yield _sse({"type": "final", **_build_chat_response(final_state).model_dump()})
+
+    return StreamingResponse(gen(), media_type="text/event-stream")
 
 
 @app.post("/chat/approve", response_model=ChatResponse)

@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from langsmith import traceable
 
 from graph.state import AssistantState
-from llm.client import invoke_structured_with_fallback
+from llm.client import invoke_structured_with_fallback, invoke_text_with_fallback
 from graph.policy import evaluate_policy, ActionType, PolicyDecision
 from models.schemas import (
     EmailDraftExtraction,
@@ -12,7 +12,6 @@ from models.schemas import (
     DailyBriefingExtraction,
     TaskExtraction,
     MeetingPrepExtraction,
-    ChatReply,
     EmailSendExtraction,
     EventMatchExtraction,
 )
@@ -318,8 +317,8 @@ Reply helpfully in 1-3 sentences. If they seem to want one of your capabilities,
 tell them how to phrase the request. Do not invent emails, events, or tasks."""
 
     try:
-        result = invoke_structured_with_fallback(ChatReply, prompt)
-        return {"reply": result.reply.strip(), "tool_used": "chat"}
+        # plain text (not structured) so /chat/stream can stream the tokens
+        return {"reply": invoke_text_with_fallback(prompt).strip(), "tool_used": "chat"}
     except Exception:
         return {
             "reply": f"I can {CAPABILITIES}. What would you like to do?",

@@ -5,6 +5,7 @@ export interface EmailDraft {
 }
 
 export interface CalendarEventDraft {
+  id?: string;
   summary?: string;
   start?: string;
   end?: string;
@@ -12,13 +13,6 @@ export interface CalendarEventDraft {
 }
 
 export interface CalendarConflict {
-  summary?: string;
-  start?: string;
-  end?: string;
-}
-
-export interface CalendarEvent {
-  id?: string;
   summary?: string;
   start?: string;
   end?: string;
@@ -34,7 +28,7 @@ export interface ActionPayload {
     | "delete_calendar_event";
   draft?: EmailDraft;
   email?: EmailDraft; // for send_gmail_message
-  event?: CalendarEventDraft | CalendarEvent;
+  event?: CalendarEventDraft;
   email_context?: { sender?: string; subject?: string; snippet?: string };
 }
 

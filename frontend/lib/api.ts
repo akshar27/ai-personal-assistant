@@ -54,3 +54,46 @@ export async function sendApproval(userId: string, approved: boolean): Promise<C
 export function getGoogleAuthUrl(): string {
   return `${API_BASE}/auth/google/start`;
 }
+
+type StreamHandlers = {
+  onToken: (t: string) => void;
+  onFinal: (r: ChatResponse) => void;
+  onError: (message: string) => void;
+};
+
+/** POST /chat/stream — streams the conversational reply token-by-token via SSE. */
+export async function sendChatStream(
+  userId: string,
+  message: string,
+  { onToken, onFinal, onError }: StreamHandlers,
+): Promise<void> {
+  const res = await fetch(`${API_BASE}/chat/stream`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userId, message }),
+  });
+  if (!res.ok || !res.body) {
+    onError(await res.text());
+    return;
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    const parts = buffer.split("\n\n");
+    buffer = parts.pop() ?? "";
+    for (const part of parts) {
+      const line = part.trim();
+      if (!line.startsWith("data:")) continue;
+      const evt = JSON.parse(line.slice(5).trim());
+      if (evt.type === "token") onToken(evt.content as string);
+      else if (evt.type === "final") onFinal(evt as ChatResponse);
+    }
+  }
+}

@@ -111,8 +111,7 @@ def test_create_and_list_tasks(graph, fake_llm, fake_google):
 
 
 def test_unknown_chat_uses_the_llm(graph, fake_llm, fake_google):
-    from models.schemas import ChatReply
-    fake_llm.set(ChatReply, ChatReply(reply="I'm doing well — how can I help?"))
+    fake_llm.text = "I'm doing well — how can I help?"
     result = invoke(graph, "hey how's it going")
     assert result["intent"] == "chat"
     assert result["reply"] == "I'm doing well — how can I help?"

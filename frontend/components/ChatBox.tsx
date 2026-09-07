@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import MessageList, { Message } from "./MessageList";
-import { sendApproval, sendChat, getGoogleAuthUrl } from "../lib/api";
+import { sendApproval, sendChatStream, getGoogleAuthUrl } from "../lib/api";
 
 const samplePrompts = [
   "summarize my unread emails",
@@ -80,31 +80,38 @@ export default function ChatBox() {
       text: finalMessage,
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    // append the user message + an empty assistant message we stream into
+    setMessages((prev) => [...prev, userMessage, { role: "assistant", text: "" }]);
     if (!customMessage) setInput("");
     setLoading(true);
 
+    const patchLast = (patch: Partial<Message>) =>
+      setMessages((prev) => {
+        const next = [...prev];
+        next[next.length - 1] = { ...next[next.length - 1], ...patch };
+        return next;
+      });
+
+    let streamed = "";
     try {
-      const res = await sendChat(threadId, finalMessage);
-
-      const assistantMessage: Message = {
-        role: "assistant",
-        text: res.reply,
-        requiresApproval: res.requires_approval,
-        approvalPayload: res.approval_payload,
-        approvalResolved: false,
-        approvalStatus: null,
-      };
-
-      setMessages((prev) => [...prev, assistantMessage]);
-    } catch (error) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          text: `Error: ${error instanceof Error ? error.message : String(error)}`,
+      await sendChatStream(threadId, finalMessage, {
+        onToken: (t) => {
+          streamed += t;
+          patchLast({ text: streamed });
         },
-      ]);
+        onFinal: (res) => {
+          patchLast({
+            text: res.reply || streamed || "(no reply)",
+            requiresApproval: res.requires_approval,
+            approvalPayload: res.approval_payload,
+            approvalResolved: false,
+            approvalStatus: null,
+          });
+        },
+        onError: (message) => patchLast({ text: `Error: ${message}` }),
+      });
+    } catch (error) {
+      patchLast({ text: `Error: ${error instanceof Error ? error.message : String(error)}` });
     } finally {
       setLoading(false);
     }

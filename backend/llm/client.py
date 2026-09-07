@@ -66,3 +66,23 @@ def invoke_structured_with_fallback(schema: Type[StructuredModel], prompt: str) 
         return llm.invoke(prompt)
 
     raise ValueError(f"Unsupported LLM_PROVIDER: {settings.llm_provider}")
+
+
+def _text_llm():
+    """A plain (non-structured) chat model, honouring the provider setting."""
+    if settings.llm_provider == "ollama":
+        return _get_ollama_llm()
+    try:
+        return _get_openai_llm()
+    except Exception:
+        if settings.llm_provider == "openai_first":
+            return _get_ollama_llm()
+        raise
+
+
+@traceable(run_type="llm", name="invoke_text_with_fallback")
+def invoke_text_with_fallback(prompt: str) -> str:
+    """Plain text completion. Used where a schema adds nothing (chat replies) and
+    where token streaming matters."""
+    resp = _text_llm().invoke(prompt)
+    return getattr(resp, "content", str(resp))

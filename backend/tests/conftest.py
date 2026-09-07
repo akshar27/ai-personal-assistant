@@ -53,6 +53,9 @@ def fake_llm(monkeypatch):
     fake = FakeLLM()
     # Patch every module that imported the symbol directly.
     monkeypatch.setattr("graph.nodes.invoke_structured_with_fallback", fake)
+    # Plain-text calls (chat replies): return whatever `fake.text` is set to.
+    fake.text = "OK."
+    monkeypatch.setattr("graph.nodes.invoke_text_with_fallback", lambda prompt: fake.text)
     return fake
 
 
