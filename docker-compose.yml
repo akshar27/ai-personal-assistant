@@ -23,7 +23,9 @@ services:
 
   backend:
     build: ./backend
-    env_file: ./backend/.env
+    env_file:
+      - path: ./backend/.env
+        required: false
     environment:
       DATABASE_URL: postgresql://assistant:assistant@db:5432/assistant
       FRONTEND_ORIGIN: http://localhost:3000

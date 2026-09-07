@@ -20,6 +20,19 @@ jobs:
       - run: pip install -r requirements-dev.txt
       - run: python -m pytest -q
       - run: python -m eval.redteam
+      - name: migrations apply cleanly (sqlite) and match the models
+        run: |
+          alembic upgrade head
+          alembic check
+        env:
+          DATABASE_URL: sqlite:///storage/ci.db
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose build
+      - run: docker compose config
 
   frontend:
     runs-on: ubuntu-latest

@@ -4,6 +4,8 @@ A production-style AI personal assistant: a **LangGraph** agent behind a
 **FastAPI** API and a **Next.js** chat UI, wired to Gmail and Google Calendar,
 with a **policy layer** that classifies every action by risk and a
 **human-in-the-loop approval** gate before anything user-facing happens.
+Multi-user (Google sign-in + guest mode), durable state in Postgres, and
+deployable as two containers — see [`docs/deploy.md`](docs/deploy.md).
 
 ## Features
 
@@ -21,7 +23,12 @@ with a **policy layer** that classifies every action by risk and a
   ignored, never acted on. Adversarial eval in `eval/redteam.py`
 - **Policy + approval**: read-only actions run freely; state-changing and
   high-risk actions are gated by an explicit approve/reject step
-- User memory & preferences (SQLite), timezone-aware scheduling
+- **Multi-user**: "Sign in with Google" (the OAuth grant *is* the login) or a
+  guest session (chat + memory + tasks, no Google data). Per-user Google tokens
+  encrypted at rest; signed session cookie
+- **Durable state**: conversation checkpoints, preferences, tasks, tokens, and
+  email-history vectors all in Postgres (SQLite for local/tests) via
+  `DATABASE_URL`; Alembic migrations
 - Daily briefing (emails + calendar + tasks), task / follow-up tracking,
   meeting-prep assistant
 - LangSmith tracing on every node
@@ -33,7 +40,9 @@ flowchart TD
     UI["Next.js chat UI<br/>+ approval cards"] -->|POST /chat| API["FastAPI"]
     API --> G["LangGraph assistant graph"]
 
-    subgraph G["LangGraph assistant graph (InMemorySaver checkpointer)"]
+    UI -->|Sign in with Google / guest| AUTH["/auth · session cookie<br/>per-user encrypted tokens"]
+
+    subgraph G["LangGraph assistant graph"]
         DI["detect_intent"] --> PREP["prepare_* node<br/>(LLM structured extraction)"]
         PREP --> POL["policy_check<br/>risk → allow / require_approval / deny / clarify"]
         POL -->|allow| TOOL["Gmail / Calendar tool"]
@@ -46,11 +55,15 @@ flowchart TD
     RET --> GUARD["guard: fence + injection scan"]
     GUARD --> ANS["grounded answer + citations"]
 
-    G <-->|memory / tasks| DB[("SQLite")]
-    RET <-->|vector search| VDB[("email_chunks<br/>SQLite + NumPy cosine")]
+    G <-->|"checkpoints · memory · tasks · tokens"| DB[("Postgres<br/>(SQLite locally)")]
+    RET <-->|vector search| VDB[("email_chunks<br/>pgvector / SQLite+NumPy")]
+    AUTH <--> DB
     TOOL <-->|Gmail / Calendar API| GOOG["Google APIs"]
     G -.->|traces| LS["LangSmith"]
 ```
+
+State persistence is `DATABASE_URL`-driven: `InMemorySaver` + SQLite locally
+(the test suite needs no database), `PostgresSaver` + pgvector in production.
 
 ### Retrieval + guardrails
 
@@ -73,19 +86,28 @@ which resumes the same graph thread with `Command(resume={"approved": true})`.
 
 ## Run it
 
-### Backend
+### Everything at once (Docker)
+
+```bash
+cp backend/.env.docker.example backend/.env    # fill in the secrets
+docker compose up --build                      # frontend :3000 · backend :8000 · postgres :5432
+```
+Runs Postgres + pgvector, applies migrations, and serves both apps.
+
+### Backend only (local dev, SQLite)
 
 ```bash
 cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-cp .env.example .env        # fill in OPENAI_API_KEY etc. (see below)
+cp .env.example .env        # fill in OPENAI_API_KEY, SESSION_SECRET, TOKEN_ENCRYPTION_KEY
 # put your Google OAuth client file at backend/client_secret.json
+alembic upgrade head        # creates storage/app.db
 uvicorn app:app --reload    # http://localhost:8000
 ```
 
-Then connect Google: open `http://localhost:8000/auth/google/start`.
+Open the frontend, then **Sign in with Google** or **Continue as guest**.
 
 **Environment** (`backend/.env`):
 
@@ -97,7 +119,9 @@ Then connect Google: open `http://localhost:8000/auth/google/start`.
 | `LLM_PROVIDER` | `openai` \| `openai_first` (OpenAI, then local Ollama) \| `ollama` |
 | `HISTORY_INGEST_MAX_MESSAGES` | default `200` |
 | `INJECTION_LLM_CHECK` | escalate borderline injection checks to the LLM (default off) |
-| `SESSION_SECRET` | signs the OAuth cookie — **must** be set in production |
+| `DATABASE_URL` | default `sqlite:///storage/app.db`; a `postgresql://…` URL in prod |
+| `SESSION_SECRET` | signs the session cookie — **must** be set in production |
+| `TOKEN_ENCRYPTION_KEY` | Fernet key encrypting per-user Google tokens; required once anyone signs in |
 | `GOOGLE_REDIRECT_URI` | default `http://localhost:8000/auth/google/callback` |
 | `FRONTEND_ORIGIN` | default `http://localhost:3000` |
 | `LANGSMITH_API_KEY` / `LANGSMITH_TRACING` | optional tracing |
@@ -116,7 +140,7 @@ npm run dev                 # http://localhost:3000
 ```bash
 cd backend
 pip install -r requirements-dev.txt
-python -m pytest                    # 110 tests — no network, no API keys
+python -m pytest                    # 120 tests — no network, no API keys, SQLite
 python -m eval.run_eval             # LLM eval harness (needs a live model)
 python -m eval.redteam              # prompt-injection screen: precision/recall
 ```
@@ -133,20 +157,29 @@ corpus and gates on zero missed attacks.
 
 ```txt
 backend/
-  app.py                  FastAPI: /chat, /chat/stream, /chat/approve,
-                          /history/index, Google OAuth
+  app.py                  FastAPI: /auth/*, /chat, /chat/stream, /chat/approve,
+                          /history/index
   config.py               env-driven settings
+  db/
+    engine.py             SQLAlchemy engine from DATABASE_URL (lazy, resettable)
+    tables.py             Core tables: users, preferences, tasks, google_tokens
+  alembic/                migrations
+  auth/
+    session.py            signed session cookie (itsdangerous)
+    tokens.py             per-user Google creds, Fernet-encrypted at rest
+    users.py              Google `sub` / guest user rows
+    context.py            request-scoped user id (ContextVar) for integrations
+    deps.py               FastAPI current_user dependency
   graph/
-    assistant_graph.py    the LangGraph StateGraph (39 nodes)
+    assistant_graph.py    LangGraph StateGraph (39 nodes); Postgres/InMemory checkpointer
     nodes.py              LLM extraction, policy, responders (incl. respond_history)
     intent.py             hybrid keyword + LLM intent classifier
     tools.py              Gmail / Calendar / retrieve_history tool nodes
     policy.py             action → risk → decision (+ untrusted_injection signal)
-    memory.py             SQLite preferences + tasks
-    state.py              AssistantState TypedDict
+    memory.py             preferences + tasks (on the DB engine)
   retrieval/
     embeddings.py         OpenAI / Ollama embeddings
-    store.py              VectorStore interface + SqliteVectorStore
+    store.py              VectorStore: SqliteVectorStore | PgVectorStore (pgvector)
     ingest.py             Gmail → chunk → embed → upsert  (+ CLI)
     search.py             embed query → cosine top-k
   security/
@@ -154,22 +187,31 @@ backend/
     redaction.py          PII redaction for logs / traces
     guard.py              fence untrusted text + report
   integrations/           gmail_client, calendar_client, google_auth
-  models/schemas.py       pydantic request / extraction models
   eval/                   scenario dataset + evaluators + runner + redteam
-  tests/                  pytest suite
+  tests/                  pytest suite (SQLite, no network)
+  Dockerfile
 
 frontend/
-  app/                    Next.js app router
-  components/             ChatBox, MessageList, ApprovalCard
-  lib/                    api client + shared types
+  app/ components/ lib/   Next.js UI, api client, shared types
+  Dockerfile              multi-stage Next standalone
+
+docker-compose.yml · backend/fly.toml · frontend/fly.toml · render.yaml
 ```
 
 ## Design decisions & tradeoffs
 
-- **SQLite + NumPy cosine, not a vector DB.** One mailbox indexes to a few
-  thousand chunks; a full scan is sub-10 ms and adds no service to run or
-  deploy. `VectorStore` is an interface — `PgVectorStore` (pgvector + HNSW)
-  drops in when the app goes multi-tenant.
+- **One `DATABASE_URL`, two dialects.** SQLite locally and in CI means the test
+  suite stays network- and service-free (120 tests, ~2s); Postgres + pgvector
+  in production. `db/` is SQLAlchemy Core + Alembic; `VectorStore` has a
+  `SqliteVectorStore` (NumPy cosine — sub-10 ms over one mailbox) and a
+  `PgVectorStore` (pgvector + HNSW), picked by URL.
+- **Google sign-in *is* the login.** The OAuth grant the app already needs for
+  Gmail/Calendar doubles as authentication (`sub` = user id), so there's no
+  separate password system. Guest mode gives a no-Google session so the live
+  demo works without handing over an inbox.
+- **No host-specific code.** The app is configured entirely through env vars and
+  ships as plain Dockerfiles; `fly.toml` / `render.yaml` are thin wrappers, and
+  `docs/deploy.md` has a "switching hosts" checklist.
 - **Heuristics before LLM, everywhere.** Intent classification and injection
   screening both run deterministic rules first and only call a model when the
   rules are unsure. Cheaper, faster, and testable without a network; the LLM is
