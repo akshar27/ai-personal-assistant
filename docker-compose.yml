@@ -1,0 +1,48 @@
+# Full stack for local dev / self-hosting: Postgres (with pgvector), the
+# FastAPI backend, and the Next.js frontend. `docker compose up --build`.
+#
+# Needs backend/.env (copy backend/.env.docker.example). The backend container
+# runs `alembic upgrade head` on start.
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: assistant
+      POSTGRES_PASSWORD: assistant
+      POSTGRES_DB: assistant
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U assistant -d assistant"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  backend:
+    build: ./backend
+    env_file: ./backend/.env
+    environment:
+      DATABASE_URL: postgresql://assistant:assistant@db:5432/assistant
+      FRONTEND_ORIGIN: http://localhost:3000
+      GOOGLE_REDIRECT_URI: http://localhost:8000/auth/google/callback
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

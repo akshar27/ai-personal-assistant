@@ -214,17 +214,22 @@ class PgVectorStore(VectorStore):
     def __init__(self, dsn: str | None = None):
         self._dsn = dsn
 
+    def _dsn_str(self) -> str:
+        return (self._dsn or settings.database_url).replace("postgresql+psycopg://", "postgresql://")
+
     def _connect(self):
         import psycopg
         from pgvector.psycopg import register_vector
 
-        dsn = (self._dsn or settings.database_url).replace("postgresql+psycopg://", "postgresql://")
-        conn = psycopg.connect(dsn, autocommit=True)
-        register_vector(conn)
+        conn = psycopg.connect(self._dsn_str(), autocommit=True)
+        register_vector(conn)  # needs the `vector` type to already exist (see init)
         return conn
 
     def init(self) -> None:
-        with self._connect() as conn:
+        import psycopg
+
+        # First connection must NOT register_vector — the extension may not exist yet.
+        with psycopg.connect(self._dsn_str(), autocommit=True) as conn:
             conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
             conn.execute(
                 f"""

@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+tests/
+storage/
+*.db
+.env
+.env.*
+client_secret.json
+eval_results.json
+.git/
