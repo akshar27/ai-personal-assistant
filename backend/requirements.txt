@@ -2,10 +2,17 @@ fastapi
 uvicorn[standard]
 python-dotenv
 pydantic
+itsdangerous
+
 langgraph
 langchain-core
 langchain-openai
+langsmith
+
 google-auth
 google-auth-oauthlib
 google-api-python-client
-itsdangerous
+
+# Optional: local LLM fallback (LLM_PROVIDER=openai_first / ollama).
+# The code degrades gracefully if this is not installed.
+langchain-ollama

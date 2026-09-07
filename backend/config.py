@@ -11,6 +11,11 @@ class Settings(BaseModel):
     app_name: str = "AI Personal Assistant"
     app_env: str = os.getenv("APP_ENV", "development")
 
+    # Signs the OAuth session cookie. MUST be set in any non-dev environment.
+    session_secret: str = os.getenv("SESSION_SECRET", "dev-only-insecure-session-secret")
+
+    log_level: str = os.getenv("LOG_LEVEL", "INFO")
+
     openai_api_key: str | None = os.getenv("OPENAI_API_KEY")
     openai_model: str = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
 
@@ -40,5 +45,12 @@ class Settings(BaseModel):
     tokens_file: str = str(STORAGE_DIR / "tokens.json")
     memory_db_file: str = str(STORAGE_DIR / "memory.db")
 
+    @property
+    def is_production(self) -> bool:
+        return self.app_env.lower() in {"production", "prod"}
+
 
 settings = Settings()
+
+if settings.is_production and settings.session_secret == "dev-only-insecure-session-secret":
+    raise RuntimeError("SESSION_SECRET must be set to a strong random value in production.")

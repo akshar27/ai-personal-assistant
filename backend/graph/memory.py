@@ -1,7 +1,14 @@
 import sqlite3
 import json
-from datetime import datetime
+from datetime import datetime, timezone
+
 from config import settings
+
+
+def _now_utc_iso() -> str:
+    """Current UTC time as a naive ISO string (no offset suffix), matching how
+    due_at / created_at have always been stored."""
+    return datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
 
 
 def get_connection():
@@ -114,7 +121,7 @@ def create_task(
     conn = get_connection()
     cur = conn.cursor()
 
-    created_at = datetime.utcnow().isoformat()
+    created_at = _now_utc_iso()
     metadata_json = json.dumps(metadata or {})
 
     cur.execute(
@@ -176,7 +183,7 @@ def get_due_tasks(user_id: str):
     conn = get_connection()
     cur = conn.cursor()
 
-    now = datetime.utcnow().isoformat()
+    now = _now_utc_iso()
 
     cur.execute(
         """

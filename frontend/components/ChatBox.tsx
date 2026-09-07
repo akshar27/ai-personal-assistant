@@ -97,12 +97,12 @@ export default function ChatBox() {
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
-    } catch (error: any) {
+    } catch (error) {
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          text: `Error: ${error.message}`,
+          text: `Error: ${error instanceof Error ? error.message : String(error)}`,
         },
       ]);
     } finally {
@@ -140,12 +140,12 @@ export default function ChatBox() {
 
         return updated;
       });
-    } catch (error: any) {
+    } catch (error) {
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          text: `Approval error: ${error.message}`,
+          text: `Approval error: ${error instanceof Error ? error.message : String(error)}`,
         },
       ]);
     } finally {
@@ -183,12 +183,12 @@ export default function ChatBox() {
 
         return updated;
       });
-    } catch (error: any) {
+    } catch (error) {
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          text: `Reject error: ${error.message}`,
+          text: `Reject error: ${error instanceof Error ? error.message : String(error)}`,
         },
       ]);
     } finally {

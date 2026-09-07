@@ -63,3 +63,7 @@ class MeetingPrepExtraction(BaseModel):
     context: str
     talking_points: List[str]
     suggested_actions: List[str]
+
+
+class ChatReply(BaseModel):
+    reply: str = Field(description="A helpful, concise conversational reply to the user.")

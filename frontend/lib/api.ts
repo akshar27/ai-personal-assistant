@@ -1,3 +1,5 @@
+import type { ApprovalPayload } from "./types";
+
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
@@ -6,7 +8,7 @@ export type ChatResponse = {
   intent: string;
   tool_used?: string | null;
   requires_approval?: boolean;
-  approval_payload?: any;
+  approval_payload?: ApprovalPayload;
 };
 
 export async function sendChat(userId: string, message: string): Promise<ChatResponse> {

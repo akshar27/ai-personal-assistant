@@ -1,5 +1,5 @@
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from langsmith import traceable
 
 from graph.state import AssistantState
@@ -12,6 +12,7 @@ from models.schemas import (
     DailyBriefingExtraction,
     TaskExtraction,
     MeetingPrepExtraction,
+    ChatReply,
 )
 from graph.memory import (
     save_preference,
@@ -197,7 +198,20 @@ def detect_intent(state: AssistantState) -> AssistantState:
             "action_type": ActionType.EMAIL_SUMMARIZE.value,
         }
 
-    if "calendar" in message or "today" in message:
+    calendar_today_phrases = (
+        "calendar",
+        "agenda",
+        "my schedule",
+        "schedule today",
+        "today's schedule",
+        "what's on today",
+        "whats on today",
+        "what do i have today",
+        "my day today",
+        "meetings today",
+        "events today",
+    )
+    if any(phrase in message for phrase in calendar_today_phrases):
         return {
             **base_reset,
             "intent": "calendar_today",
@@ -248,22 +262,39 @@ def handle_remember_preference(state: AssistantState) -> AssistantState:
     }
 
 
+CAPABILITIES = (
+    "summarize unread emails, show today's calendar, remember preferences, "
+    "draft or reply to emails (with your approval), create calendar events with "
+    "Google Meet links, run a daily briefing, track tasks and reminders, and "
+    "prep you for your next meeting"
+)
+
+
 @traceable(run_type="chain", name="respond_chat")
 def respond_chat(state: AssistantState) -> AssistantState:
     user_id = state.get("user_id", "default_user")
+    message = state.get("message", "")
     prefs = get_preferences(user_id)
+    pref_text = "; ".join(p["value"] for p in prefs[:5]) if prefs else "none stored"
 
-    if prefs:
-        pref_text = "; ".join([p["value"] for p in prefs[:3]])
+    prompt = f"""You are a concise, friendly AI personal assistant.
+You can {CAPABILITIES}.
+
+Known user preferences: {pref_text}
+
+The user said: "{message}"
+
+Reply helpfully in 1-3 sentences. If they seem to want one of your capabilities,
+tell them how to phrase the request. Do not invent emails, events, or tasks."""
+
+    try:
+        result = invoke_structured_with_fallback(ChatReply, prompt)
+        return {"reply": result.reply.strip(), "tool_used": "chat"}
+    except Exception:
         return {
-            "reply": f"You said: {state.get('message', '')}. I also remember these preferences: {pref_text}",
-            "tool_used": "none",
+            "reply": f"I can {CAPABILITIES}. What would you like to do?",
+            "tool_used": "chat",
         }
-
-    return {
-        "reply": "I can summarize unread emails, show today's calendar, remember preferences, draft emails, reply to unread emails, or create calendar events.",
-        "tool_used": "none",
-    }
 
 
 @traceable(run_type="chain", name="respond_email_summary")
@@ -611,16 +642,16 @@ Instructions:
             "tool_used": "calendar_prepare_event",
         }
 
+    # The user gave an explicit clock time (e.g. "3pm"). If the LLM landed on a
+    # different hour it almost always got the timezone wrong — trust the user
+    # and snap the event to the hour they asked for, keeping the duration.
     requested_hour = extract_requested_hour(message)
     if requested_hour is not None and start_dt.hour != requested_hour:
-        return {
-            "draft_event": event_payload,
-            "policy_decision": "clarify",
-            "policy_reason": f"I interpreted the meeting as {start_dt.strftime('%-I:%M %p')}, but you mentioned {requested_hour % 12 or 12}:00 {'PM' if requested_hour >= 12 else 'AM'}. Please confirm the intended time.",
-            "approval_required": False,
-            "approval_payload": {},
-            "tool_used": "calendar_prepare_event",
-        }
+        duration = end_dt - start_dt
+        start_dt = start_dt.replace(hour=requested_hour, minute=0, second=0, microsecond=0)
+        end_dt = start_dt + (duration if duration.total_seconds() > 0 else timedelta(minutes=30))
+        event_payload["start"] = start_dt.isoformat()
+        event_payload["end"] = end_dt.isoformat()
 
     if end_dt <= start_dt:
         return {

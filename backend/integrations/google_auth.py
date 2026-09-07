@@ -1,8 +1,14 @@
 import json
+import logging
 from pathlib import Path
+
+from google.auth.transport.requests import Request as GoogleAuthRequest
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
+
 from config import settings
+
+logger = logging.getLogger("ai_assistant.google_auth")
 
 SCOPES = [
     "https://www.googleapis.com/auth/gmail.modify",
@@ -39,5 +45,16 @@ def load_tokens() -> Credentials | None:
     if not token_path.exists():
         return None
 
-    data = token_path.read_text()
-    return Credentials.from_authorized_user_info(json.loads(data), SCOPES)
+    creds = Credentials.from_authorized_user_info(json.loads(token_path.read_text()), SCOPES)
+
+    # Refresh a stale access token and persist it, so the next call doesn't 401.
+    if creds and creds.expired and creds.refresh_token:
+        try:
+            creds.refresh(GoogleAuthRequest())
+            save_tokens(creds)
+            logger.info("refreshed Google access token")
+        except Exception:
+            logger.exception("failed to refresh Google access token")
+            return None
+
+    return creds

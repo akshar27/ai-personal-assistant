@@ -1,9 +1,13 @@
+import logging
 from typing import Type, TypeVar
-from pydantic import BaseModel
 
-from config import settings
+from pydantic import BaseModel
 from langchain_openai import ChatOpenAI
 from langsmith import traceable
+
+from config import settings
+
+logger = logging.getLogger("ai_assistant.llm")
 
 StructuredModel = TypeVar("StructuredModel", bound=BaseModel)
 
@@ -19,13 +23,16 @@ def _get_openai_llm():
 
 
 def _get_ollama_llm():
-    # Lazy import so production does not require langchain_ollama
-    from langchain_ollama import ChatOllama
+    # Lazy import so production does not require langchain_ollama.
+    try:
+        from langchain_ollama import ChatOllama
+    except ImportError as e:
+        raise RuntimeError(
+            "Ollama fallback requested but langchain-ollama is not installed. "
+            "Install it (pip install langchain-ollama) or set LLM_PROVIDER=openai."
+        ) from e
 
-    return ChatOllama(
-        model=settings.ollama_model,
-        temperature=0,
-    )
+    return ChatOllama(model=settings.ollama_model, temperature=0)
 
 
 @traceable(run_type="llm", name="invoke_structured_with_fallback")
@@ -43,7 +50,7 @@ def invoke_structured_with_fallback(schema: Type[StructuredModel], prompt: str) 
             return llm.invoke(prompt)
         except Exception as e:
             openai_error = e
-            print(f"[LLM] OpenAI failed, falling back to Ollama: {e}")
+            logger.warning("OpenAI call failed, falling back to Ollama: %s", e)
 
         try:
             llm = _get_ollama_llm().with_structured_output(schema)

@@ -1,10 +1,11 @@
 import ApprovalCard from "./ApprovalCard";
+import type { ApprovalPayload } from "../lib/types";
 
 export type Message = {
   role: "user" | "assistant";
   text: string;
   requiresApproval?: boolean;
-  approvalPayload?: any;
+  approvalPayload?: ApprovalPayload;
   approvalResolved?: boolean;
   approvalStatus?: "approved" | "rejected" | null;
 };

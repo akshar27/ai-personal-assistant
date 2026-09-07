@@ -1,5 +1,7 @@
 "use client";
 
+import type { ApprovalPayload, CalendarConflict } from "../lib/types";
+
 function formatDateTime(value?: string) {
   if (!value) return "-";
 
@@ -13,7 +15,7 @@ function formatDateTime(value?: string) {
 }
 
 type ApprovalCardProps = {
-  payload: any;
+  payload: ApprovalPayload;
   onApprove: () => void;
   onReject: () => void;
   loading?: boolean;
@@ -117,7 +119,7 @@ export default function ApprovalCard({
                 Conflicting Events
               </p>
 
-              {conflicts.map((c: any, i: number) => (
+              {conflicts.map((c: CalendarConflict, i: number) => (
                 <div key={i} className="mb-2">
                   <div className="font-medium">{c.summary}</div>
                   <div className="text-xs">

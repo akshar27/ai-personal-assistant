@@ -2,6 +2,11 @@
 __pycache__/
 *.pyc
 *.db
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
 
 # Node
 node_modules/
@@ -12,10 +17,12 @@ backend/.env
 backend/client_secret.json
 backend/storage/tokens.json
 backend/storage/memory.db
-backend/.env
 frontend/.env.local
-__pycache__/
-*.pyc
+frontend/.env
 
-# OS
+# Eval output (regenerated on each run)
+backend/eval_results.json
+
+# OS / IDE
 .DS_Store
+.idea/
