@@ -110,7 +110,25 @@ def fake_google(monkeypatch):
         "today_events": [],
         "upcoming": [],
         "deleted": [],
+        # Full-body messages for retrieval ingestion: list of dicts shaped like
+        # integrations.gmail_client.get_message_full's return value.
+        "messages": [],
     }
+
+    def list_message_ids(query="newer_than:180d", max_results=200):
+        return [{"id": m["id"], "thread_id": m.get("thread_id", "t" + m["id"])}
+                for m in state["messages"][:max_results]]
+
+    def get_message_full(message_id):
+        m = next(x for x in state["messages"] if x["id"] == message_id)
+        return {
+            "id": m["id"],
+            "thread_id": m.get("thread_id", "t" + m["id"]),
+            "subject": m.get("subject", "(No Subject)"),
+            "sender": m.get("sender", "someone@example.com"),
+            "sent_at": m.get("sent_at", "2026-08-01T00:00:00"),
+            "body": m.get("body", ""),
+        }
 
     def list_unread_emails(max_results=5):
         return state["unread"]
@@ -150,6 +168,9 @@ def fake_google(monkeypatch):
 
     def get_upcoming_events(max_results=5, timezone_str=None):
         return state["upcoming"]
+
+    monkeypatch.setattr("retrieval.ingest.list_message_ids", list_message_ids)
+    monkeypatch.setattr("retrieval.ingest.get_message_full", get_message_full)
 
     for name, fn in {
         "list_unread_emails": list_unread_emails,
