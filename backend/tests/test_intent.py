@@ -25,6 +25,11 @@ from graph.policy import ActionType
         ("mark task 3 done", "complete_task"),
         ("how are you today", "chat"),
         ("hey there", "chat"),
+        ("what did Sam say about the renewal date", "search_history"),
+        ("did I already reply to the vendor", "search_history"),
+        ("find the email from the recruiter about salary", "search_history"),
+        ("search my inbox for the contract terms", "search_history"),
+        ("when did we agree on the launch date in that thread", "search_history"),
     ],
 )
 def test_keyword_intent_table(message, expected_intent):

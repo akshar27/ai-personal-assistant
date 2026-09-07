@@ -29,6 +29,10 @@ class Settings(BaseModel):
     ollama_model: str = os.getenv("OLLAMA_MODEL", "llama3.1")
     ollama_embedding_model: str = os.getenv("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text")
 
+    # Escalate borderline prompt-injection checks to the LLM (off by default:
+    # heuristics are deterministic and free).
+    injection_llm_check: bool = os.getenv("INJECTION_LLM_CHECK", "").lower() in {"1", "true", "yes"}
+
     # Retrieval over email history.
     history_index_db_file: str = str(STORAGE_DIR / "history_index.db")
     history_ingest_max_messages: int = int(os.getenv("HISTORY_INGEST_MAX_MESSAGES", "200"))

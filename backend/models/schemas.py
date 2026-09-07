@@ -20,6 +20,13 @@ class ApprovalRequest(BaseModel):
     approved: bool
 
 
+class HistoryIndexRequest(BaseModel):
+    user_id: str = Field(default="default_user")
+    max_messages: Optional[int] = None
+    query: Optional[str] = None
+    reindex: bool = False
+
+
 class EmailDraftExtraction(BaseModel):
     to: str = Field(description="Recipient email address")
     subject: str = Field(description="Email subject")
@@ -90,6 +97,7 @@ Intent = Literal[
     "create_task",
     "list_tasks",
     "complete_task",
+    "search_history",
 ]
 
 
@@ -101,6 +109,13 @@ class IntentClassification(BaseModel):
         "small talk, questions about the assistant, or anything that does not "
         "clearly map to an email / calendar / task / memory action."
     )
+
+
+class InjectionScan(BaseModel):
+    """LLM second opinion on whether untrusted text is a prompt-injection attempt."""
+    is_injection: bool = Field(description="True if the text tries to instruct or manipulate the assistant.")
+    technique: str = Field(default="", description="Short label for the technique, if any.")
+    confidence: float = Field(default=0.0, description="0-1 confidence.")
 
 
 class EventMatchExtraction(BaseModel):

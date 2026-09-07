@@ -50,3 +50,9 @@ class AssistantState(TypedDict, total=False):
     # High-risk actions (compose+send, delete) — always gated by approval
     send_email: Dict[str, Any]
     event_to_delete: Dict[str, Any]
+
+    # Retrieval over indexed email history
+    history_query: str
+    history_hits: List[dict]
+    history_injection_flagged: bool
+    history_injection_reasons: List[str]

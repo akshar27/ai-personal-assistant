@@ -7,9 +7,11 @@ from fastapi.responses import RedirectResponse, StreamingResponse
 from starlette.middleware.sessions import SessionMiddleware
 from langgraph.types import Command
 
-from models.schemas import ChatRequest, ChatResponse, ApprovalRequest
+from models.schemas import ChatRequest, ChatResponse, ApprovalRequest, HistoryIndexRequest
 from graph.assistant_graph import build_graph
 from graph.memory import init_memory
+from retrieval.ingest import ingest_user_history
+from retrieval.store import get_store
 from integrations.google_auth import create_flow, save_tokens
 from config import settings
 
@@ -147,6 +149,10 @@ def _sse(data: dict) -> str:
     return f"data: {json.dumps(data)}\n\n"
 
 
+# Graph nodes whose LLM tokens should be forwarded to the SSE client.
+_STREAMING_NODES = {"chat_response", "history_response"}
+
+
 @app.post("/chat/stream")
 def chat_stream(req: ChatRequest):
     """Same as /chat, but streams the assistant's conversational reply token by
@@ -164,7 +170,7 @@ def chat_stream(req: ChatRequest):
             ):
                 if mode == "messages":
                     msg, meta = chunk
-                    if meta.get("langgraph_node") == "chat_response":
+                    if meta.get("langgraph_node") in _STREAMING_NODES:
                         token = getattr(msg, "content", "")
                         if token:
                             yield _sse({"type": "token", "content": token})
@@ -192,6 +198,31 @@ def chat_stream(req: ChatRequest):
         yield _sse({"type": "final", **_build_chat_response(final_state).model_dump()})
 
     return StreamingResponse(gen(), media_type="text/event-stream")
+
+
+@app.get("/history/status")
+def history_status(user_id: str = "default_user"):
+    return {"user_id": user_id, "indexed_chunks": get_store().count(user_id)}
+
+
+@app.post("/history/index")
+def history_index(req: HistoryIndexRequest):
+    """Pull recent Gmail, embed it, and upsert into the retrieval store.
+    Synchronous and bounded (default 200 messages)."""
+    try:
+        stats = ingest_user_history(
+            req.user_id,
+            max_messages=req.max_messages,
+            query=req.query,
+            reindex=req.reindex,
+        )
+        return {"status": "ok", **stats}
+    except RuntimeError as e:
+        logger.warning("history index failed for user=%s: %s", req.user_id, e)
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception:
+        logger.exception("history index crashed for user=%s", req.user_id)
+        raise HTTPException(status_code=500, detail="History indexing failed.")
 
 
 @app.post("/chat/approve", response_model=ChatResponse)

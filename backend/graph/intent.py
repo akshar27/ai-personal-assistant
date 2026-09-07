@@ -44,7 +44,27 @@ INTENT_TO_ACTION: dict[str, str] = {
     "create_task": "create_task",
     "list_tasks": "list_tasks",
     "complete_task": "complete_task",
+    "search_history": "history_search",
 }
+
+# High-precision phrasings for "look something up in my past email".
+_HISTORY_PATTERNS = [
+    r"\bwhat did .+? (say|said|write|wrote|mention|tell|told|ask)\b",
+    r"\bwhen did (i|we|they|he|she|you)\b",
+    r"\bdid (i|we) (ever |already )?(reply|respond|answer|send|tell|ask|confirm|agree|say)\b",
+    r"\bfind (the|that|an|my|a) (email|message|thread|conversation)\b",
+    r"\bsearch (my|the) (email|inbox|mail|messages|history)\b",
+    r"\b(look|dig) through my (email|inbox|mail)\b",
+    r"\bwho (emailed|messaged|contacted|told) me\b",
+    r"\bremind me what .+? (said|wrote|sent|asked)\b",
+    r"\baccording to .+?'s? (email|message|note)\b",
+]
+_HISTORY_MAIL_WORDS = r"\b(e-?mail|inbox|thread|message|conversation|correspondence)\b"
+_HISTORY_RECALL_VERBS = (
+    r"\b(say|said|write|wrote|mention|mentioned|tell|told|sent|reply|replied|"
+    r"discuss|discussed|agree|agreed|confirm|confirmed|promise|promised|quote|quoted)\b"
+)
+_HISTORY_QUESTION = r"\b(what|when|who|which|did|does|was|were|has|have|where|why)\b"
 
 _LLM_PROMPT = """You classify a personal-assistant user message into one intent.
 
@@ -63,10 +83,18 @@ Intents:
 - create_task: add a reminder / to-do
 - list_tasks: show open tasks
 - complete_task: mark a task done
+- search_history: ANY question that could only be answered from the user's own
+  past emails / correspondence — specifics about their contracts, projects,
+  clients, colleagues, plans, deadlines, or commitments ("when does our contract
+  renew", "what's the wifi password from IT", "what did the recruiter offer",
+  "what do I need for my first day"). Possessives like "my"/"our"/"the" about a
+  concrete personal detail are a strong signal.
 
 Message: {message}
 
-Respond with the single best intent. When in doubt, choose chat."""
+Choose search_history for personal-specific questions, chat for greetings /
+small talk / general knowledge / questions about your own capabilities. When
+in doubt between those two, choose search_history."""
 
 
 def _continuation_intent(message: str, previous_action_type: str) -> str | None:
@@ -124,6 +152,11 @@ def _keyword_intent(message: str) -> str:
     if re.search(r"reply to (email|message)\s+\d+", message):
         return "reply_to_unread_email"
 
+    # High-precision recall phrasings ("what did Sam say…", "did I reply…").
+    # Ahead of the draft/send rules because "did I *reply*" trips "reply".
+    if any(re.search(p, message) for p in _HISTORY_PATTERNS):
+        return "search_history"
+
     # "send an email to X" — compose + send (high-risk, gated by approval).
     # Checked before "draft" so it wins when both words appear. Missing details
     # (e.g. no recipient) are handled downstream by prepare_email_send → clarify.
@@ -145,6 +178,16 @@ def _keyword_intent(message: str) -> str:
 
     if any(word in message for word in ["create event", "schedule", "meeting", "calendar event"]):
         return "draft_calendar_event"
+
+    # Looser: a mail noun + a recall verb + a question shape. After the draft
+    # rules (so "draft an email about what we discussed" stays a draft), before
+    # the unread-email summary (so recall questions aren't read as "list inbox").
+    if (
+        re.search(_HISTORY_MAIL_WORDS, message)
+        and re.search(_HISTORY_RECALL_VERBS, message)
+        and (re.search(_HISTORY_QUESTION, message) or message.rstrip().endswith("?"))
+    ):
+        return "search_history"
 
     if "unread email" in message or "emails" in message or "gmail" in message:
         return "email_summary"

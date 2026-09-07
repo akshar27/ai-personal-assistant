@@ -27,6 +27,7 @@ from graph.nodes import (
     respond_meeting_prep,
     prepare_email_send,
     prepare_event_delete,
+    respond_history,
 )
 from graph.tools import (
     fetch_email_summary,
@@ -39,6 +40,7 @@ from graph.tools import (
     fetch_upcoming_events_tool,
     send_email_tool,
     delete_event_tool,
+    retrieve_history_tool,
 )
 
 
@@ -100,6 +102,8 @@ def route_intent(state: AssistantState) -> str:
         return "prepare_send"
     if intent == "delete_calendar_event":
         return "upcoming_events_for_delete"
+    if intent == "search_history":
+        return "retrieve_history"
 
     return "chat_response"
 
@@ -218,6 +222,10 @@ def build_graph():
     graph.add_node("prepare_delete", prepare_event_delete)
     graph.add_node("delete_event", delete_event_tool)
 
+    # Retrieval over indexed email history (read-only)
+    graph.add_node("retrieve_history", retrieve_history_tool)
+    graph.add_node("history_response", respond_history)
+
     graph.set_entry_point("detect_intent")
 
     graph.add_conditional_edges(
@@ -237,10 +245,13 @@ def build_graph():
             "upcoming_events_tool": "upcoming_events_tool",
             "prepare_send": "prepare_send",
             "upcoming_events_for_delete": "upcoming_events_for_delete",
+            "retrieve_history": "retrieve_history",
         },
     )
 
     graph.add_edge("remember_node", END)
+    graph.add_edge("retrieve_history", "history_response")
+    graph.add_edge("history_response", END)
 
     # High-risk action flows → policy_check → approval
     graph.add_edge("prepare_send", "policy_check")

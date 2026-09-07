@@ -3,12 +3,14 @@ from langsmith import traceable
 
 from graph.state import AssistantState
 from graph.memory import get_latest_preference_value
+from retrieval.search import search_history
 from integrations.gmail_client import (
     list_unread_emails,
     create_gmail_draft,
     create_gmail_reply_draft,
     send_gmail_message,
     get_email_by_id,
+    gmail_link,
 )
 from integrations.calendar_client import (
     get_today_events,
@@ -197,6 +199,33 @@ def create_calendar_event_tool(state: AssistantState) -> AssistantState:
         "reply": reply,
         "tool_used": "calendar_event",
     }
+
+@traceable(run_type="tool", name="retrieve_history_tool")
+def retrieve_history_tool(state: AssistantState) -> AssistantState:
+    """Semantic search over the user's indexed email history."""
+    user_id = state.get("user_id", "default_user")
+    query = state.get("message", "")
+
+    hits = search_history(user_id, query)
+
+    return {
+        "history_query": query,
+        "history_hits": [
+            {
+                "message_id": h.message_id,
+                "thread_id": h.thread_id,
+                "sender": h.sender,
+                "subject": h.subject,
+                "sent_at": h.sent_at,
+                "text": h.text,
+                "score": round(h.score, 4),
+                "link": gmail_link(h.message_id),
+            }
+            for h in hits
+        ],
+        "tool_used": "history_search",
+    }
+
 
 @traceable(run_type="tool", name="fetch_upcoming_events_tool")
 def fetch_upcoming_events_tool(state: AssistantState) -> AssistantState:
