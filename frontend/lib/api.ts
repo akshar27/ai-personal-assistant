@@ -3,6 +3,9 @@ import type { ApprovalPayload } from "./types";
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
+/** Every call carries the session cookie. */
+const withCreds: RequestInit = { credentials: "include" };
+
 export type ChatResponse = {
   reply: string;
   intent: string;
@@ -11,48 +14,64 @@ export type ChatResponse = {
   approval_payload?: ApprovalPayload;
 };
 
-export async function sendChat(userId: string, message: string): Promise<ChatResponse> {
-  const res = await fetch(`${API_BASE}/chat`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      user_id: userId,
-      message,
-    }),
-  });
+export type Me = {
+  id: string;
+  email: string | null;
+  name: string | null;
+  is_guest: boolean;
+  google_connected: boolean;
+};
 
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(err);
-  }
-
-  return res.json();
+async function jsonOrThrow<T>(res: Response): Promise<T> {
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<T>;
 }
 
-export async function sendApproval(userId: string, approved: boolean): Promise<ChatResponse> {
-  const res = await fetch(`${API_BASE}/chat/approve`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      user_id: userId,
-      approved,
-    }),
-  });
+// ---------------------------------------------------------------- auth
 
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(err);
-  }
+export async function getMe(): Promise<Me | null> {
+  const res = await fetch(`${API_BASE}/auth/me`, withCreds);
+  if (!res.ok) return null;
+  const body = (await res.json()) as { user: Me | null };
+  return body.user;
+}
 
-  return res.json();
+export async function startGuest(): Promise<Me> {
+  const res = await fetch(`${API_BASE}/auth/guest`, { method: "POST", ...withCreds });
+  return jsonOrThrow<Me>(res);
+}
+
+export async function logout(): Promise<void> {
+  await fetch(`${API_BASE}/auth/logout`, { method: "POST", ...withCreds });
 }
 
 export function getGoogleAuthUrl(): string {
   return `${API_BASE}/auth/google/start`;
+}
+
+// ---------------------------------------------------------------- chat
+
+export async function sendChat(conversationId: string, message: string): Promise<ChatResponse> {
+  const res = await fetch(`${API_BASE}/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    ...withCreds,
+    body: JSON.stringify({ user_id: conversationId, message }),
+  });
+  return jsonOrThrow<ChatResponse>(res);
+}
+
+export async function sendApproval(
+  conversationId: string,
+  approved: boolean,
+): Promise<ChatResponse> {
+  const res = await fetch(`${API_BASE}/chat/approve`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    ...withCreds,
+    body: JSON.stringify({ user_id: conversationId, approved }),
+  });
+  return jsonOrThrow<ChatResponse>(res);
 }
 
 export type HistoryIndexResult = {
@@ -64,16 +83,14 @@ export type HistoryIndexResult = {
 };
 
 /** POST /history/index — pull recent Gmail into the retrieval index. */
-export async function indexHistory(userId: string): Promise<HistoryIndexResult> {
+export async function indexHistory(): Promise<HistoryIndexResult> {
   const res = await fetch(`${API_BASE}/history/index`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ user_id: userId }),
+    ...withCreds,
+    body: "{}",
   });
-  if (!res.ok) {
-    throw new Error(await res.text());
-  }
-  return res.json();
+  return jsonOrThrow<HistoryIndexResult>(res);
 }
 
 type StreamHandlers = {
@@ -84,14 +101,15 @@ type StreamHandlers = {
 
 /** POST /chat/stream — streams the conversational reply token-by-token via SSE. */
 export async function sendChatStream(
-  userId: string,
+  conversationId: string,
   message: string,
   { onToken, onFinal, onError }: StreamHandlers,
 ): Promise<void> {
   const res = await fetch(`${API_BASE}/chat/stream`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ user_id: userId, message }),
+    ...withCreds,
+    body: JSON.stringify({ user_id: conversationId, message }),
   });
   if (!res.ok || !res.body) {
     onError(await res.text());

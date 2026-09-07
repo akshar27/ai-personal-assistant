@@ -2,7 +2,16 @@
 
 import { useEffect, useRef, useState } from "react";
 import MessageList, { Message } from "./MessageList";
-import { sendApproval, sendChatStream, getGoogleAuthUrl, indexHistory } from "../lib/api";
+import {
+  sendApproval,
+  sendChatStream,
+  getGoogleAuthUrl,
+  indexHistory,
+  getMe,
+  startGuest,
+  logout,
+  type Me,
+} from "../lib/api";
 
 const samplePrompts = [
   "summarize my unread emails",
@@ -27,6 +36,8 @@ function getOrCreateThreadId(): string {
 export default function ChatBox() {
   const [input, setInput] = useState("");
   const [googleConnected, setGoogleConnected] = useState(false);
+  const [me, setMe] = useState<Me | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const [threadId, setThreadId] = useState("default-thread");
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -44,19 +55,32 @@ export default function ChatBox() {
     setThreadId(getOrCreateThreadId());
 
     const params = new URLSearchParams(window.location.search);
-    const connected = params.get("google_connected") === "true";
-
-    if (connected) {
+    const justConnected = params.get("google_connected") === "true";
+    if (justConnected) {
+      window.history.replaceState({}, "", "/");
       setGoogleConnected(true);
-
-      const timer = setTimeout(() => {
-        window.history.replaceState({}, "", "/");
-        setGoogleConnected(false);
-      }, 2500);
-
-      return () => clearTimeout(timer);
+      setTimeout(() => setGoogleConnected(false), 2500);
     }
+
+    getMe()
+      .then(setMe)
+      .finally(() => setAuthChecked(true));
   }, []);
+
+  async function handleSignOut() {
+    await logout();
+    setMe(null);
+    setMessages([{ role: "assistant", text: "Signed out." }]);
+  }
+
+  async function handleGuest() {
+    try {
+      const guest = await startGuest();
+      setMe(guest);
+    } catch {
+      /* ignore — button stays available */
+    }
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -124,7 +148,7 @@ export default function ChatBox() {
     setIndexing(true);
     setIndexNote(null);
     try {
-      const r = await indexHistory(threadId);
+      const r = await indexHistory();
       setIndexNote(
         `Indexed ${r.messages_indexed} new email(s) (${r.chunks_added} chunks). ` +
           `Now ask about anything in your mail.`,
@@ -224,6 +248,35 @@ export default function ChatBox() {
     }
   }
 
+  if (authChecked && !me) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 px-4">
+        <div className="w-full max-w-md rounded-3xl border border-white/60 bg-white/80 p-8 text-center shadow-2xl backdrop-blur">
+          <h1 className="text-2xl font-bold text-slate-900">AI Personal Assistant</h1>
+          <p className="mt-3 text-sm leading-6 text-slate-600">
+            A LangGraph agent for Gmail and Google Calendar, with retrieval over
+            your email history and human approval for sensitive actions.
+          </p>
+          <a
+            href={getGoogleAuthUrl()}
+            className="mt-6 block rounded-2xl bg-slate-900 px-4 py-3 font-medium text-white transition hover:bg-slate-800"
+          >
+            Sign in with Google
+          </a>
+          <button
+            onClick={handleGuest}
+            className="mt-3 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 font-medium text-slate-800 transition hover:bg-slate-50"
+          >
+            Continue as guest
+          </button>
+          <p className="mt-3 text-xs text-slate-400">
+            Guest mode: chat, memory, and tasks only — no Gmail or Calendar access.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       <div className="mx-auto max-w-6xl px-4 py-8">
@@ -242,12 +295,32 @@ export default function ChatBox() {
               </p>
             </div>
 
-            <a
-              href={getGoogleAuthUrl()}
-              className="mb-4 block rounded-2xl bg-slate-900 px-4 py-3 text-center font-medium text-white transition hover:bg-slate-800"
-            >
-              Connect Google
-            </a>
+            <div className="mb-4 rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-sm">
+              {me?.is_guest ? (
+                <>
+                  <div className="font-medium text-slate-800">Guest session</div>
+                  <a
+                    href={getGoogleAuthUrl()}
+                    className="mt-1 inline-block text-xs font-medium text-indigo-600 hover:underline"
+                  >
+                    Sign in with Google for Gmail &amp; Calendar →
+                  </a>
+                </>
+              ) : (
+                <>
+                  <div className="font-medium text-slate-800">
+                    {me?.name || me?.email || "Signed in"}
+                  </div>
+                  <div className="text-xs text-emerald-600">Google connected</div>
+                </>
+              )}
+              <button
+                onClick={handleSignOut}
+                className="mt-2 text-xs text-slate-500 hover:text-slate-800 hover:underline"
+              >
+                Sign out
+              </button>
+            </div>
 
             <button
               onClick={startNewChat}
@@ -256,13 +329,15 @@ export default function ChatBox() {
               New Chat
             </button>
 
-            <button
-              onClick={handleIndexHistory}
-              disabled={indexing}
-              className="mb-2 w-full rounded-2xl border border-indigo-300 bg-indigo-50 px-4 py-3 text-center font-medium text-indigo-700 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {indexing ? "Indexing email…" : "Index email history"}
-            </button>
+            {!me?.is_guest && (
+              <button
+                onClick={handleIndexHistory}
+                disabled={indexing}
+                className="mb-2 w-full rounded-2xl border border-indigo-300 bg-indigo-50 px-4 py-3 text-center font-medium text-indigo-700 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {indexing ? "Indexing email…" : "Index email history"}
+              </button>
+            )}
 
             {indexNote && (
               <div className="mb-6 rounded-2xl bg-slate-100 px-4 py-3 text-xs leading-5 text-slate-600">
