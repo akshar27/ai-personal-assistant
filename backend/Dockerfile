@@ -17,5 +17,6 @@ USER app
 
 EXPOSE 8000
 
-# Run migrations, then serve. PORT is honoured for hosts that inject it.
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Migrations run out-of-band: `[deploy].release_command` on Fly, an explicit
+# command in docker-compose. This entrypoint just serves. $PORT is honoured.
+CMD ["sh", "-c", "uvicorn app:app --host 0.0.0.0 --port ${PORT:-8000}"]

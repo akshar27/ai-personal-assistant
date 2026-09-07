@@ -1,0 +1,19 @@
+# Fly.io config for the frontend. NEXT_PUBLIC_API_BASE_URL is baked at build
+# time, so it's a build arg here — point it at the deployed backend URL.
+app = "ai-assistant-frontend"
+primary_region = "sjc"
+
+[build]
+  [build.args]
+    NEXT_PUBLIC_API_BASE_URL = "https://ai-assistant-backend.fly.dev"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
