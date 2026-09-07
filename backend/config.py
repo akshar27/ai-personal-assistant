@@ -1,10 +1,15 @@
 import os
 from pathlib import Path
+
+from dotenv import load_dotenv
 from pydantic import BaseModel
 
 BASE_DIR = Path(__file__).resolve().parent
 STORAGE_DIR = BASE_DIR / "storage"
 STORAGE_DIR.mkdir(exist_ok=True)
+
+# Load backend/.env if present. Real environment variables still win.
+load_dotenv(BASE_DIR / ".env")
 
 
 class Settings(BaseModel):

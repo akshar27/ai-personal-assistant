@@ -11,8 +11,11 @@ import pytest
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND_DIR))
 
-os.environ.setdefault("OPENAI_API_KEY", "test-key-not-used")
-os.environ.setdefault("LLM_PROVIDER", "openai")
+# Set before anything imports config / load_dotenv. These win over backend/.env.
+os.environ["OPENAI_API_KEY"] = "test-key-not-used"
+os.environ["LLM_PROVIDER"] = "openai"
+os.environ["LANGSMITH_TRACING"] = "false"
+os.environ["LANGSMITH_API_KEY"] = ""  # present-but-empty so load_dotenv won't fill it
 
 
 @pytest.fixture(autouse=True)
