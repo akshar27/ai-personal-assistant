@@ -23,9 +23,16 @@ class Settings(BaseModel):
 
     openai_api_key: str | None = os.getenv("OPENAI_API_KEY")
     openai_model: str = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
+    embedding_model: str = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
 
     llm_provider: str = os.getenv("LLM_PROVIDER", "openai_first")
     ollama_model: str = os.getenv("OLLAMA_MODEL", "llama3.1")
+    ollama_embedding_model: str = os.getenv("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text")
+
+    # Retrieval over email history.
+    history_index_db_file: str = str(STORAGE_DIR / "history_index.db")
+    history_ingest_max_messages: int = int(os.getenv("HISTORY_INGEST_MAX_MESSAGES", "200"))
+    history_ingest_query: str = os.getenv("HISTORY_INGEST_QUERY", "newer_than:180d")
 
     langsmith_tracing: str | None = os.getenv("LANGSMITH_TRACING")
     langsmith_api_key: str | None = os.getenv("LANGSMITH_API_KEY")

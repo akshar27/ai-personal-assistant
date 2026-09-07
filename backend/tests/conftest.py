@@ -20,14 +20,45 @@ os.environ["LANGSMITH_API_KEY"] = ""  # present-but-empty so load_dotenv won't f
 
 @pytest.fixture(autouse=True)
 def temp_memory_db(tmp_path, monkeypatch):
-    """Point the memory store at a fresh SQLite file for each test."""
+    """Point the memory + history stores at fresh SQLite files for each test."""
     from config import settings
     from graph import memory
 
     db_file = tmp_path / "memory.db"
     monkeypatch.setattr(settings, "memory_db_file", str(db_file))
+    monkeypatch.setattr(settings, "history_index_db_file", str(tmp_path / "history.db"))
+
+    import retrieval.store as store_mod
+    monkeypatch.setattr(store_mod, "_default_store", None)
+
     memory.init_memory()
     yield db_file
+
+
+# A deterministic stand-in for real embeddings: hashes tokens into a fixed-width
+# bag-of-words vector, so semantically-overlapping text lands near each other
+# without any network call.
+def _fake_vector(text: str):
+    import numpy as np
+    from retrieval.embeddings import EMBEDDING_DIM
+
+    vec = np.zeros(EMBEDDING_DIM, dtype=np.float32)
+    for tok in text.lower().split():
+        vec[hash(tok) % EMBEDDING_DIM] += 1.0
+    norm = np.linalg.norm(vec)
+    if norm:
+        vec /= norm
+    return vec.tolist()
+
+
+@pytest.fixture
+def fake_embeddings(monkeypatch):
+    # ingest.py / search.py reference `embeddings.embed_*` via the module, so
+    # patching the source module is enough.
+    monkeypatch.setattr("retrieval.embeddings.embed_texts",
+                        lambda texts: [_fake_vector(t) for t in texts])
+    monkeypatch.setattr("retrieval.embeddings.embed_query", lambda t: _fake_vector(t))
+    return _fake_vector
 
 
 class FakeLLM:

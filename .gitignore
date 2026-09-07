@@ -17,6 +17,7 @@ backend/.env
 backend/client_secret.json
 backend/storage/tokens.json
 backend/storage/memory.db
+backend/storage/history_index.db
 frontend/.env.local
 frontend/.env
 
