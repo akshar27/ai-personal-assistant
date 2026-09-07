@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from langsmith import traceable
 
 from graph.state import AssistantState
+from graph.intent import classify_intent
 from llm.client import invoke_structured_with_fallback, invoke_text_with_fallback
 from graph.policy import evaluate_policy, ActionType, PolicyDecision
 from models.schemas import (
@@ -63,7 +64,12 @@ def extract_requested_hour(message: str) -> int | None:
 
 @traceable(run_type="chain", name="detect_intent")
 def detect_intent(state: AssistantState) -> AssistantState:
-    message = state.get("message", "").lower().strip()
+    """Thin state-shaping wrapper around `classify_intent` (graph/intent.py).
+
+    Clears any action/approval state left over from a previous turn, then
+    delegates the actual intent decision to the hybrid keyword + LLM classifier.
+    """
+    message = state.get("message", "")
 
     base_reset = {
         "policy_decision": "",
@@ -80,178 +86,13 @@ def detect_intent(state: AssistantState) -> AssistantState:
         "suggested_event": {},
     }
 
-    previous_policy_decision = state.get("policy_decision", "")
-    previous_action_type = state.get("action_type", "")
-    email_pattern = r"[\w\.-]+@[\w\.-]+\.\w+"
-
-    if previous_policy_decision == "clarify":
-        if previous_action_type == ActionType.EMAIL_DRAFT.value and re.search(email_pattern, message):
-            return {
-                **base_reset,
-                "intent": "draft_email",
-                "action_type": ActionType.EMAIL_DRAFT.value,
-            }
-
-        if previous_action_type == ActionType.EMAIL_SEND.value and re.search(email_pattern, message):
-            return {
-                **base_reset,
-                "intent": "send_email",
-                "action_type": ActionType.EMAIL_SEND.value,
-            }
-
-        if previous_action_type == ActionType.CALENDAR_CREATE.value:
-            return {
-                **base_reset,
-                "intent": "draft_calendar_event",
-                "action_type": ActionType.CALENDAR_CREATE.value,
-            }
-
-        if previous_action_type == ActionType.EMAIL_REPLY_DRAFT.value:
-            return {
-                **base_reset,
-                "intent": "reply_to_unread_email",
-                "action_type": ActionType.EMAIL_REPLY_DRAFT.value,
-            }
-
-    if message.startswith("remember "):
-        return {
-            **base_reset,
-            "intent": "remember_preference",
-            "action_type": ActionType.MEMORY_WRITE.value,
-        }
-
-    if any(
-        phrase in message
-        for phrase in [
-            "daily briefing",
-            "morning briefing",
-            "daily summary",
-            "brief me on my day",
-            "what's on my plate today",
-            "briefing",
-        ]
-    ):
-        return {
-            **base_reset,
-            "intent": "daily_briefing",
-            "action_type": "daily_briefing",
-        }
-
-    if any(
-        phrase in message
-        for phrase in [
-            "prep me for my next meeting",
-            "prepare me for my next meeting",
-            "meeting prep",
-            "prepare for meeting",
-            "next meeting prep",
-        ]
-    ):
-        return {
-            **base_reset,
-            "intent": "meeting_prep",
-            "action_type": "meeting_prep",
-        }
-
-    if "task" in message and any(word in message for word in ["show", "list", "open", "my"]):
-        return {
-            **base_reset,
-            "intent": "list_tasks",
-            "action_type": "list_tasks",
-        }
-
-    if re.search(r"\b(mark|complete|finish)\s+task\s+\d+\s*(done|complete|completed)?", message):
-        return {
-            **base_reset,
-            "intent": "complete_task",
-            "action_type": "complete_task",
-        }
-
-    if message.startswith("remind me") or "remind me to" in message:
-        return {
-            **base_reset,
-            "intent": "create_task",
-            "action_type": "create_task",
-        }
-
-    if re.search(r"reply to (email|message)\s+\d+", message):
-        return {
-            **base_reset,
-            "intent": "reply_to_unread_email",
-            "action_type": ActionType.EMAIL_REPLY_DRAFT.value,
-        }
-
-    # "send an email to X" — compose + send (high-risk, gated by approval).
-    # Checked before "draft" so it wins when both words appear. Missing details
-    # (e.g. no recipient) are handled downstream by prepare_email_send → clarify.
-    mentions_email = bool(re.search(r"\be-?mail\b|\bmessage\b", message))
-    wants_send = "send" in message and mentions_email and "draft" not in message
-    if wants_send:
-        return {
-            **base_reset,
-            "intent": "send_email",
-            "action_type": ActionType.EMAIL_SEND.value,
-        }
-
-    # "cancel my 3pm meeting" / "delete the standup event"
-    if re.search(r"\b(cancel|delete|remove)\b.*\b(meeting|event|call|appointment|invite)\b", message) or \
-       re.search(r"\bcancel\b.*\b(my|the)\b.*\b(\d{1,2}\s*(am|pm)|standup|sync|1:1|one on one)\b", message):
-        return {
-            **base_reset,
-            "intent": "delete_calendar_event",
-            "action_type": ActionType.CALENDAR_DELETE.value,
-        }
-
-    if "email" in message or "reply" in message:
-        if any(
-            word in message
-            for word in ["draft", "write", "compose", "reply", "follow-up", "follow up"]
-        ):
-            return {
-                **base_reset,
-                "intent": "draft_email",
-                "action_type": ActionType.EMAIL_DRAFT.value,
-            }
-
-    if any(word in message for word in ["create event", "schedule", "meeting", "calendar event"]):
-        return {
-            **base_reset,
-            "intent": "draft_calendar_event",
-            "action_type": ActionType.CALENDAR_CREATE.value,
-        }
-
-    if "unread email" in message or "emails" in message or "gmail" in message:
-        return {
-            **base_reset,
-            "intent": "email_summary",
-            "action_type": ActionType.EMAIL_SUMMARIZE.value,
-        }
-
-    calendar_today_phrases = (
-        "calendar",
-        "agenda",
-        "my schedule",
-        "schedule today",
-        "today's schedule",
-        "what's on today",
-        "whats on today",
-        "what do i have today",
-        "my day today",
-        "meetings today",
-        "events today",
+    intent, action_type = classify_intent(
+        message,
+        previous_policy_decision=state.get("policy_decision", ""),
+        previous_action_type=state.get("action_type", ""),
     )
-    if any(phrase in message for phrase in calendar_today_phrases):
-        return {
-            **base_reset,
-            "intent": "calendar_today",
-            "action_type": "calendar_read",
-        }
 
-    return {
-        **base_reset,
-        "intent": "chat",
-        "action_type": "chat",
-    }
+    return {**base_reset, "intent": intent, "action_type": action_type}
 
 @traceable(run_type="chain", name="handle_remember_preference")
 def handle_remember_preference(state: AssistantState) -> AssistantState:

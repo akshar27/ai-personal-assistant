@@ -43,6 +43,11 @@ class FakeLLM:
     def __call__(self, schema, prompt):
         self.calls.append((schema.__name__, prompt))
         if schema.__name__ not in self.responses:
+            # The LLM intent "second opinion" is only reached when the keyword
+            # heuristic is unsure — default it to plain chat so tests that don't
+            # care about it don't have to wire it up.
+            if schema.__name__ == "IntentClassification":
+                return schema(intent="chat")
             raise AssertionError(f"FakeLLM got an unexpected schema: {schema.__name__}")
         data = self.responses[schema.__name__]
         return data if not isinstance(data, dict) else schema(**data)
@@ -53,6 +58,7 @@ def fake_llm(monkeypatch):
     fake = FakeLLM()
     # Patch every module that imported the symbol directly.
     monkeypatch.setattr("graph.nodes.invoke_structured_with_fallback", fake)
+    monkeypatch.setattr("graph.intent.invoke_structured_with_fallback", fake)
     # Plain-text calls (chat replies): return whatever `fake.text` is set to.
     fake.text = "OK."
     monkeypatch.setattr("graph.nodes.invoke_text_with_fallback", lambda prompt: fake.text)

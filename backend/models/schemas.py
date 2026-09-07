@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, Any, List
+from typing import Optional, Any, List, Literal
 
 
 class ChatRequest(BaseModel):
@@ -73,6 +73,34 @@ class EmailSendExtraction(BaseModel):
     to: str = Field(description="Recipient email address. Empty string if not provided.")
     subject: str = Field(description="Email subject")
     body: str = Field(description="Email body text")
+
+
+Intent = Literal[
+    "chat",
+    "email_summary",
+    "calendar_today",
+    "draft_email",
+    "send_email",
+    "reply_to_unread_email",
+    "draft_calendar_event",
+    "delete_calendar_event",
+    "remember_preference",
+    "daily_briefing",
+    "meeting_prep",
+    "create_task",
+    "list_tasks",
+    "complete_task",
+]
+
+
+class IntentClassification(BaseModel):
+    """LLM 'second opinion' on what the user is asking for, used only when the
+    keyword heuristic is not confident."""
+    intent: Intent = Field(
+        description="The single best-matching intent. Use 'chat' for greetings, "
+        "small talk, questions about the assistant, or anything that does not "
+        "clearly map to an email / calendar / task / memory action."
+    )
 
 
 class EventMatchExtraction(BaseModel):
