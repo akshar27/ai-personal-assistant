@@ -37,18 +37,28 @@ export default function ApprovalCard({
   const action = innerPayload?.action;
 
   const draft = innerPayload?.draft;
+  const sendEmail = innerPayload?.email;
   const event = innerPayload?.event;
+  const isHighRisk = risk === "high";
 
   const conflicts = payload?.conflict_details || [];
   const suggestedEvent = payload?.suggested_event;
 
   return (
-    <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+    <div
+      className={`mt-4 rounded-2xl border p-4 ${
+        isHighRisk ? "border-rose-300 bg-rose-50" : "border-amber-200 bg-amber-50"
+      }`}
+    >
       {/* Header */}
       <div className="mb-3 flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-semibold text-amber-900">
-            Approval Required
+          <h3
+            className={`text-sm font-semibold ${
+              isHighRisk ? "text-rose-900" : "text-amber-900"
+            }`}
+          >
+            {isHighRisk ? "High-risk action — confirm to proceed" : "Approval Required"}
           </h3>
           <p className="text-xs text-slate-600">
             {actionType} • {risk?.toUpperCase()}
@@ -81,6 +91,29 @@ export default function ApprovalCard({
           <p><b>To:</b> {draft?.to || "-"}</p>
           <p><b>Subject:</b> {draft?.subject || "-"}</p>
           <p><b>Body:</b> {draft?.body || "-"}</p>
+        </div>
+      )}
+
+      {/* SEND EMAIL (high risk) */}
+      {action === "send_gmail_message" && (
+        <div className="space-y-2 rounded-xl bg-white p-4 text-sm shadow-sm">
+          <p className="text-xs font-semibold text-rose-600">
+            This email will be SENT immediately on approval.
+          </p>
+          <p><b>To:</b> {sendEmail?.to || "-"}</p>
+          <p><b>Subject:</b> {sendEmail?.subject || "-"}</p>
+          <p><b>Body:</b> {sendEmail?.body || "-"}</p>
+        </div>
+      )}
+
+      {/* DELETE EVENT (high risk) */}
+      {action === "delete_calendar_event" && (
+        <div className="space-y-2 rounded-xl bg-white p-4 text-sm shadow-sm">
+          <p className="text-xs font-semibold text-rose-600">
+            This calendar event will be permanently deleted on approval.
+          </p>
+          <p><b>Event:</b> {event?.summary || "-"}</p>
+          <p><b>Starts:</b> {formatDateTime(event?.start)}</p>
         </div>
       )}
 

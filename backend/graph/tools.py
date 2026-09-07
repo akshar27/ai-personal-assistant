@@ -7,11 +7,13 @@ from integrations.gmail_client import (
     list_unread_emails,
     create_gmail_draft,
     create_gmail_reply_draft,
+    send_gmail_message,
     get_email_by_id,
 )
 from integrations.calendar_client import (
     get_today_events,
     create_calendar_event,
+    delete_calendar_event,
     get_events_in_range,
     get_upcoming_events,
 )
@@ -89,6 +91,34 @@ def create_email_reply_draft_tool(state: AssistantState) -> AssistantState:
     return {
         "reply": f"{result['message']} Draft ID: {result['id']}",
         "tool_used": "gmail_reply_draft",
+    }
+
+
+@traceable(run_type="tool", name="send_email_tool")
+def send_email_tool(state: AssistantState) -> AssistantState:
+    email = state.get("send_email", {})
+    if not email.get("to") or not email.get("body"):
+        raise RuntimeError("No email to send (missing recipient or body).")
+
+    result = send_gmail_message(
+        to=email["to"], subject=email.get("subject", ""), body=email["body"]
+    )
+    return {
+        "reply": f"Email sent to {email['to']}. (id: {result['id']})",
+        "tool_used": "gmail_send",
+    }
+
+
+@traceable(run_type="tool", name="delete_event_tool")
+def delete_event_tool(state: AssistantState) -> AssistantState:
+    event = state.get("event_to_delete", {})
+    if not event.get("id"):
+        raise RuntimeError("No event selected to delete.")
+
+    delete_calendar_event(event["id"])
+    return {
+        "reply": f"Cancelled: {event.get('summary', 'event')} ({event.get('start', '')}).",
+        "tool_used": "calendar_delete",
     }
 
 

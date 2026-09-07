@@ -70,6 +70,19 @@ def get_email_by_id(message_id: str):
     }
 
 
+def send_gmail_message(to: str, subject: str, body: str):
+    """Compose and send an email immediately (high-risk — only after approval)."""
+    service = get_gmail_service()
+
+    message = MIMEText(body)
+    message["to"] = to
+    message["subject"] = subject
+    raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
+
+    sent = service.users().messages().send(userId="me", body={"raw": raw}).execute()
+    return {"id": sent.get("id"), "message": "Email sent."}
+
+
 def create_gmail_draft(to: str, subject: str, body: str):
     service = get_gmail_service()
 

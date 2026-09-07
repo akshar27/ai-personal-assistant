@@ -65,9 +65,11 @@ def fake_google(monkeypatch):
              "sender": "Sam <sam@example.com>", "snippet": "Free Friday?"},
         ],
         "drafts": [],
+        "sent": [],
         "events": [],
         "today_events": [],
         "upcoming": [],
+        "deleted": [],
     }
 
     def list_unread_emails(max_results=5):
@@ -83,6 +85,14 @@ def fake_google(monkeypatch):
     def create_gmail_reply_draft(thread_id, to, subject, body):
         state["drafts"].append({"thread_id": thread_id, "to": to, "subject": subject, "body": body})
         return {"id": "reply-1", "message": "Reply draft created successfully."}
+
+    def send_gmail_message(to, subject, body):
+        state["sent"].append({"to": to, "subject": subject, "body": body})
+        return {"id": "sent-1", "message": "Email sent."}
+
+    def delete_calendar_event(event_id):
+        state["deleted"].append(event_id)
+        return {"id": event_id, "message": "Event deleted."}
 
     def get_today_events(max_results=10):
         return state["today_events"]
@@ -106,9 +116,11 @@ def fake_google(monkeypatch):
         "get_email_by_id": get_email_by_id,
         "create_gmail_draft": create_gmail_draft,
         "create_gmail_reply_draft": create_gmail_reply_draft,
+        "send_gmail_message": send_gmail_message,
         "get_today_events": get_today_events,
         "get_events_in_range": get_events_in_range,
         "create_calendar_event": create_calendar_event,
+        "delete_calendar_event": delete_calendar_event,
         "get_upcoming_events": get_upcoming_events,
     }.items():
         monkeypatch.setattr(f"graph.tools.{name}", fn)

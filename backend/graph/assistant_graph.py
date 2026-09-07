@@ -25,6 +25,8 @@ from graph.nodes import (
     complete_task_node,
     prepare_meeting_prep,
     respond_meeting_prep,
+    prepare_email_send,
+    prepare_event_delete,
 )
 from graph.tools import (
     fetch_email_summary,
@@ -35,6 +37,8 @@ from graph.tools import (
     check_calendar_conflicts_tool,
     fetch_selected_email_tool,
     fetch_upcoming_events_tool,
+    send_email_tool,
+    delete_event_tool,
 )
 
 
@@ -92,6 +96,10 @@ def route_intent(state: AssistantState) -> str:
         return "complete_task"
     if intent == "meeting_prep":
         return "upcoming_events_tool"
+    if intent == "send_email":
+        return "prepare_send"
+    if intent == "delete_calendar_event":
+        return "upcoming_events_for_delete"
 
     return "chat_response"
 
@@ -107,6 +115,10 @@ def route_after_policy(state: AssistantState) -> str:
             return "create_reply_draft"
         if action_type == "calendar_create":
             return "create_calendar_event"
+        if action_type == "email_send":
+            return "send_email"
+        if action_type == "calendar_delete":
+            return "delete_event"
 
         return "policy_response"
 
@@ -133,6 +145,12 @@ def route_after_approval(state: AssistantState) -> str:
 
     if action_type == "calendar_create":
         return "create_calendar_event"
+
+    if action_type == "email_send":
+        return "send_email"
+
+    if action_type == "calendar_delete":
+        return "delete_event"
 
     return "end_rejected"
 
@@ -193,6 +211,13 @@ def build_graph():
     graph.add_node("prepare_meeting_prep", prepare_meeting_prep)
     graph.add_node("meeting_prep_response", respond_meeting_prep)
 
+    # High-risk actions: compose+send an email, delete a calendar event
+    graph.add_node("prepare_send", prepare_email_send)
+    graph.add_node("send_email", send_email_tool)
+    graph.add_node("upcoming_events_for_delete", fetch_upcoming_events_tool)
+    graph.add_node("prepare_delete", prepare_event_delete)
+    graph.add_node("delete_event", delete_event_tool)
+
     graph.set_entry_point("detect_intent")
 
     graph.add_conditional_edges(
@@ -210,10 +235,19 @@ def build_graph():
             "list_tasks": "list_tasks",
             "complete_task": "complete_task",
             "upcoming_events_tool": "upcoming_events_tool",
+            "prepare_send": "prepare_send",
+            "upcoming_events_for_delete": "upcoming_events_for_delete",
         },
     )
 
     graph.add_edge("remember_node", END)
+
+    # High-risk action flows → policy_check → approval
+    graph.add_edge("prepare_send", "policy_check")
+    graph.add_edge("upcoming_events_for_delete", "prepare_delete")
+    graph.add_edge("prepare_delete", "policy_check")
+    graph.add_edge("send_email", END)
+    graph.add_edge("delete_event", END)
 
     # Email draft flow
     graph.add_edge("prepare_draft", "policy_check")
@@ -244,6 +278,8 @@ def build_graph():
             "create_draft": "create_draft",
             "create_reply_draft": "create_reply_draft",
             "create_calendar_event": "create_calendar_event",
+            "send_email": "send_email",
+            "delete_event": "delete_event",
             "build_approval": "build_approval",
             "policy_response": "policy_response",
         },
@@ -260,6 +296,8 @@ def build_graph():
             "create_draft": "create_draft",
             "create_reply_draft": "create_reply_draft",
             "create_calendar_event": "create_calendar_event",
+            "send_email": "send_email",
+            "delete_event": "delete_event",
             "end_rejected": END,
         },
     )

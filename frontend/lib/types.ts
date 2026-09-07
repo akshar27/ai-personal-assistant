@@ -17,14 +17,24 @@ export interface CalendarConflict {
   end?: string;
 }
 
+export interface CalendarEvent {
+  id?: string;
+  summary?: string;
+  start?: string;
+  end?: string;
+}
+
 /** The inner `payload` produced by the graph's `action_payload`. */
 export interface ActionPayload {
   action?:
     | "create_gmail_draft"
     | "create_gmail_reply_draft"
-    | "create_calendar_event";
+    | "create_calendar_event"
+    | "send_gmail_message"
+    | "delete_calendar_event";
   draft?: EmailDraft;
-  event?: CalendarEventDraft;
+  email?: EmailDraft; // for send_gmail_message
+  event?: CalendarEventDraft | CalendarEvent;
   email_context?: { sender?: string; subject?: string; snippet?: string };
 }
 

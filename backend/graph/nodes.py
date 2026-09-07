@@ -13,6 +13,8 @@ from models.schemas import (
     TaskExtraction,
     MeetingPrepExtraction,
     ChatReply,
+    EmailSendExtraction,
+    EventMatchExtraction,
 )
 from graph.memory import (
     save_preference,
@@ -89,6 +91,13 @@ def detect_intent(state: AssistantState) -> AssistantState:
                 **base_reset,
                 "intent": "draft_email",
                 "action_type": ActionType.EMAIL_DRAFT.value,
+            }
+
+        if previous_action_type == ActionType.EMAIL_SEND.value and re.search(email_pattern, message):
+            return {
+                **base_reset,
+                "intent": "send_email",
+                "action_type": ActionType.EMAIL_SEND.value,
             }
 
         if previous_action_type == ActionType.CALENDAR_CREATE.value:
@@ -171,6 +180,27 @@ def detect_intent(state: AssistantState) -> AssistantState:
             **base_reset,
             "intent": "reply_to_unread_email",
             "action_type": ActionType.EMAIL_REPLY_DRAFT.value,
+        }
+
+    # "send an email to X" — compose + send (high-risk, gated by approval).
+    # Checked before "draft" so it wins when both words appear. Missing details
+    # (e.g. no recipient) are handled downstream by prepare_email_send → clarify.
+    mentions_email = bool(re.search(r"\be-?mail\b|\bmessage\b", message))
+    wants_send = "send" in message and mentions_email and "draft" not in message
+    if wants_send:
+        return {
+            **base_reset,
+            "intent": "send_email",
+            "action_type": ActionType.EMAIL_SEND.value,
+        }
+
+    # "cancel my 3pm meeting" / "delete the standup event"
+    if re.search(r"\b(cancel|delete|remove)\b.*\b(meeting|event|call|appointment|invite)\b", message) or \
+       re.search(r"\bcancel\b.*\b(my|the)\b.*\b(\d{1,2}\s*(am|pm)|standup|sync|1:1|one on one)\b", message):
+        return {
+            **base_reset,
+            "intent": "delete_calendar_event",
+            "action_type": ActionType.CALENDAR_DELETE.value,
         }
 
     if "email" in message or "reply" in message:
@@ -407,6 +437,106 @@ Instructions:
             "draft": draft,
         },
         "tool_used": "gmail_prepare_draft",
+    }
+
+
+@traceable(run_type="chain", name="prepare_email_send")
+def prepare_email_send(state: AssistantState) -> AssistantState:
+    """Compose an email that will be SENT (not drafted) once the user approves."""
+    user_id = state.get("user_id", "default_user")
+    message = state.get("message", "")
+    prefs = get_preferences(user_id)
+    pref_text = "; ".join(p["value"] for p in prefs) if prefs else "No stored preferences."
+
+    prompt = f"""You are composing an email for an AI personal assistant. This
+email will be SENT to the recipient once the user approves, so be accurate.
+
+User preferences: {pref_text}
+
+User request: {message}
+
+- Extract the recipient email address; return "" if none was given.
+- Write a clear subject and a polished body. Respect a "concise" preference.
+- Return only structured output."""
+
+    result = invoke_structured_with_fallback(EmailSendExtraction, prompt)
+    email = {
+        "to": (result.to or "").strip(),
+        "subject": (result.subject or "").strip(),
+        "body": (result.body or "").strip(),
+    }
+
+    if not email["to"] or not email["body"]:
+        return {
+            "send_email": email,
+            "policy_decision": "clarify",
+            "policy_reason": "I need a recipient address and a message before I can send an email.",
+            "approval_required": False,
+            "approval_payload": {},
+            "pending_clarification_context": {
+                "original_intent": "send_email",
+                "original_message": message,
+            },
+            "tool_used": "gmail_prepare_send",
+        }
+
+    return {
+        "send_email": email,
+        "action_type": ActionType.EMAIL_SEND.value,
+        "action_payload": {"action": "send_gmail_message", "email": email},
+        "tool_used": "gmail_prepare_send",
+    }
+
+
+@traceable(run_type="chain", name="prepare_event_delete")
+def prepare_event_delete(state: AssistantState) -> AssistantState:
+    """Find which upcoming event the user wants to cancel, for approval."""
+    message = state.get("message", "")
+    events = state.get("upcoming_events", []) or []
+
+    if not events:
+        return {
+            "policy_decision": "clarify",
+            "policy_reason": "I don't see any upcoming events to cancel.",
+            "approval_required": False,
+            "approval_payload": {},
+            "tool_used": "calendar_prepare_delete",
+        }
+
+    listing = "\n".join(
+        f"{i}. {e.get('summary', '(no title)')} — {e.get('start', '?')}"
+        for i, e in enumerate(events, start=1)
+    )
+    prompt = f"""The user wants to cancel a calendar event.
+
+Upcoming events:
+{listing}
+
+User request: "{message}"
+
+Return the 1-based index of the event they mean, or 0 if it is unclear."""
+
+    try:
+        picked = invoke_structured_with_fallback(EventMatchExtraction, prompt)
+        idx = int(picked.match_index)
+    except Exception:
+        idx = 0
+
+    if idx < 1 or idx > len(events):
+        return {
+            "policy_decision": "clarify",
+            "policy_reason": "I couldn't tell which event you mean. Try naming the event or its time.",
+            "approval_required": False,
+            "approval_payload": {},
+            "tool_used": "calendar_prepare_delete",
+        }
+
+    event = events[idx - 1]
+    return {
+        "event_to_delete": event,
+        "action_type": ActionType.CALENDAR_DELETE.value,
+        "action_payload": {"action": "delete_calendar_event", "event": event},
+        "tool_used": "calendar_prepare_delete",
     }
 
 

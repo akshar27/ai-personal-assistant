@@ -67,3 +67,18 @@ class MeetingPrepExtraction(BaseModel):
 
 class ChatReply(BaseModel):
     reply: str = Field(description="A helpful, concise conversational reply to the user.")
+
+
+class EmailSendExtraction(BaseModel):
+    to: str = Field(description="Recipient email address. Empty string if not provided.")
+    subject: str = Field(description="Email subject")
+    body: str = Field(description="Email body text")
+
+
+class EventMatchExtraction(BaseModel):
+    """Which of the listed upcoming events the user wants to cancel/delete."""
+    match_index: int = Field(
+        description="1-based index of the matching event in the provided list, "
+        "or 0 if none clearly match."
+    )
+    reason: str = Field(default="", description="Why this event was chosen.")

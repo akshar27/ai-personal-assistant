@@ -54,6 +54,7 @@ def get_today_events(max_results: int = 10):
                 break
 
         output.append({
+            "id": event.get("id"),
             "summary": event.get("summary", "(No Title)"),
             "start": start,
             "end": end,
@@ -61,6 +62,13 @@ def get_today_events(max_results: int = 10):
         })
 
     return output
+
+
+def delete_calendar_event(event_id: str):
+    """Delete an event from the primary calendar (high-risk — only after approval)."""
+    service = get_calendar_service()
+    service.events().delete(calendarId="primary", eventId=event_id).execute()
+    return {"id": event_id, "message": "Event deleted."}
 
 
 def create_calendar_event(

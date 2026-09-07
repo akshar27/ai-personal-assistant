@@ -46,3 +46,7 @@ class AssistantState(TypedDict, total=False):
     next_meeting: Dict[str, Any]
     meeting_prep: Dict[str, Any]
     meeting_prep_ready: bool
+
+    # High-risk actions (compose+send, delete) — always gated by approval
+    send_email: Dict[str, Any]
+    event_to_delete: Dict[str, Any]
