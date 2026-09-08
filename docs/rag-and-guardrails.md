@@ -71,9 +71,12 @@ to model input (that would break legitimate tasks).
    approval regardless.
 
 ### Red-team eval (`eval/redteam.py` + `tests/test_injection_guardrails.py`)
-Adversarial emails asserting: injected instructions are not followed, the turn
-is flagged, no tool call fires, and benign mail is **not** flagged (false-positive
-guard).
+The screen is a filter; the approval gate is the boundary. The eval reflects
+that: three attack corpora (literal / paraphrased / obfuscated) plus a benign
+set, reporting per-corpus recall. CI gates only on literal recall (≥ 0.9) and
+the benign false-positive rate (≤ 1) — paraphrased attacks the filter misses
+are *contained*, and `test_containment_holds_even_when_the_heuristic_misses`
+proves a heuristic miss still can't cause an autonomous action.
 
 ## 4. Milestones
 

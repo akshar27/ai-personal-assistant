@@ -13,11 +13,13 @@ Human voice, every claim traceable to code in this repo.
   upserts) behind a `VectorStore` interface with SQLite (NumPy cosine) and
   Postgres (pgvector + HNSW) implementations; recall questions are answered from
   the index with citations back to each source message.
-- Hardened the agent against prompt injection: all untrusted email text is
-  fenced as data and screened by a deterministic heuristic layer (optional LLM
-  escalation); detected attempts are surfaced and ignored rather than executed,
-  and feed an `untrusted_injection` policy signal. Wrote an adversarial eval
-  gating on zero missed attacks.
+- Hardened the agent against prompt injection with defense-in-depth: the
+  boundary is a human approval gate on every send / delete / draft (an injected
+  instruction can't act even undetected); on top, untrusted email text is fenced
+  as data and run through a heuristic + optional-LLM screen that surfaces hits
+  and bumps the policy decision. Wrote a three-corpus adversarial eval
+  (literal / paraphrased / obfuscated) that reports per-corpus recall honestly
+  rather than claiming injection is solved.
 - Made it multi-user and deployable: "Sign in with Google" (the OAuth grant is
   the login) plus a guest mode, per-user tokens encrypted at rest, durable state
   in Postgres (LangGraph `PostgresSaver`, SQLAlchemy Core + Alembic) with a
@@ -33,8 +35,9 @@ Human voice, every claim traceable to code in this repo.
 - Built a LangGraph agent (FastAPI + Next.js) for Gmail/Calendar with a
   risk-based policy layer and human approval on every sensitive action.
 - Added email-history RAG (ingestion, embeddings, a SQLite/pgvector store, cited
-  answers) and hardened the agent against prompt injection with a
-  fenced-content + heuristic screen and an adversarial eval.
+  answers) and defended it against prompt injection — a human approval gate as
+  the boundary, plus a fenced-content heuristic screen with an honest
+  three-corpus adversarial eval.
 - Took it multi-user and production-ready: Google sign-in + guest mode, per-user
   encrypted tokens, durable Postgres state, and a two-container Docker deploy
   with a 120-test no-network CI.

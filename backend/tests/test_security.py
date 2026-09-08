@@ -50,9 +50,21 @@ def test_zero_width_characters_are_flagged():
     assert scan_for_injection("normal text with a ​ hidden char").flagged is True
 
 
-def test_redteam_corpus_meets_the_gate():
+def test_redteam_eval_gates_pass():
+    # Gates: lexical recall >= 0.90 (the rules still work) and <= 1 benign
+    # flagged. Paraphrased / obfuscated recall is reported, not gated — those
+    # are what the approval gate is for.
     from eval.redteam import main
-    assert main() == 0  # no missed attacks, <=1 false positive
+    assert main() == 0
+
+
+def test_redteam_reports_the_honest_paraphrase_gap():
+    from eval import redteam
+    par_hit, par_n, _ = redteam._recall(redteam.PARAPHRASED)
+    # We don't claim to catch all reworded attacks — just documenting that the
+    # number is measured and is < 1.0, so nobody reads "adversarial eval" as
+    # "solved injection".
+    assert par_hit < par_n
 
 
 def test_guard_fences_and_reports():

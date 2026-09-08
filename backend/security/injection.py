@@ -11,9 +11,23 @@ from __future__ import annotations
 
 import logging
 import re
+import unicodedata
 from dataclasses import dataclass, field
 
 logger = logging.getLogger("ai_assistant.injection")
+
+# Hidden-character classes flagged before normalization strips them.
+_HIDDEN_CHARS = re.compile("[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]")
+
+
+def _normalize(text: str) -> str:
+    """NFKC-fold (kills fullwidth / homoglyph tricks), drop zero-width and bidi
+    controls, and collapse the letter-spacing trick (`I G N O R E`)."""
+    text = _HIDDEN_CHARS.sub("", unicodedata.normalize("NFKC", text))
+    # "I G N O R E   A L L" -> "IGNORE ALL": join runs of single chars + spaces
+    text = re.sub(r"(?:\b\w\b[ \t]){4,}\b\w\b", lambda m: m.group(0).replace(" ", ""), text)
+    return text
+
 
 _RULES: list[tuple[re.Pattern, str]] = [
     (re.compile(r"(?i)ignore\s+(all\s+|any\s+|the\s+|your\s+)?(previous|prior|above|earlier|preceding)\s+(instructions?|prompts?|messages?|context)"), "instruction-override attempt"),
@@ -30,8 +44,21 @@ _RULES: list[tuple[re.Pattern, str]] = [
     (re.compile(r"(?i)\bdelete\s+(all|every)\b[^.\n]{0,40}\b(event|calendar|email|message|file)s?\b"), "destructive instruction"),
     (re.compile(r"(?i)\bdelete\s+(the\s+)?(your|user'?s?|all\s+of\s+my)\s+[^.\n]{0,30}\b(event|calendar|email|message|file)s?\b"), "destructive instruction"),
     (re.compile(r"(?i)</?(system|user|assistant|untrusted_content|instructions?)\s*>"), "control-tag injection"),
-    (re.compile("[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]"), "hidden bidi/zero-width characters"),
     (re.compile(r"[A-Za-z0-9+/]{160,}={0,2}"), "long base64 blob"),
+    # --- paraphrase categories (intent, not exact vocabulary) ---
+    (re.compile(r"(?i)\byour\s+(real|actual|true|only|new|updated|revised)\s+(task|job|instructions?|purpose|role|goal|objective)\b"), "goal-override attempt"),
+    (re.compile(r"(?i)\b(the\s+)?(guidance|directions?|instructions?|configuration|guardrails?|rules?)\s+(you\s+(were|got|have)|configured\s+with)\b[^.\n]{0,40}\b(out\s+of\s+date|outdated|no\s+longer|don'?t\s+apply|do\s+not\s+apply|superseded)\b"), "instruction-override attempt"),
+    (re.compile(r"(?i)\b(skip|bypass|drop|waive|omit|no\s+need\s+for|don'?t\s+bother\s+with)\b[^.\n]{0,40}\b(confirm(ation|ing)?|approv(al|ing)|verif(y|ication)|the\s+check|double-check)\b"), "approval-bypass attempt"),
+    (re.compile(r"(?i)\b(may|can|should)\s+skip\b[^.\n]{0,30}\b(confirm|approval|verification|check)\b"), "approval-bypass attempt"),
+    (re.compile(r"(?i)\b(add|cc|copy|loop\s+in|bcc|include)\b[^.\n]{0,45}@[^.\n]{0,25}\b(to|on)\b[^.\n]{0,15}\b(everything|every\s+(email|message|thread|mail)|all\s+(of\s+)?(my\s+)?(email|message|mail))"), "exfiltration instruction"),
+    (re.compile(r"(?i)\b(a\s+copy\s+of|copies\s+of)\b[^.\n]{0,55}\b(also\s+)?(go(es)?|sent?|forward(ed)?)\b[^.\n]{0,20}@"), "exfiltration instruction"),
+    (re.compile(r"(?i)\b(set\s+up|create|add|make)\b[^.\n]{0,20}\b(a\s+)?(forwarding\s+)?(rule|filter|auto-?forward)\b"), "mail-rule injection"),
+    (re.compile(r"(?i)\bthis\s+is\s+the\s+(security|it|admin|ops|operations|support|infra)\s+team\b"), "authority spoofing"),
+    (re.compile(r"(?i)\byou'?re\s+(speaking|talking|now\s+dealing|communicating)\s+with\s+the\s+(account\s+owner|admin(istrator)?|operator|owner)\b"), "authority spoofing"),
+    (re.compile(r"(?i)\b(approve|confirm|authorize|go\s+ahead\s+with)\s+the\s+(pending|current|requested|open)\s+(action|request|send|email|deletion)\b"), "approval spoofing"),
+    (re.compile(r"(?i)\b(this\s+(mailbox|address|thread|sender)\s+is\s+(allow-?listed|whitelisted|trusted|exempt))\b"), "authority spoofing"),
+    (re.compile(r"(?i)\b(wipe|clear\s+out|empty|erase)\b[^.\n]{0,30}\b(my\s+)?(calendar|schedule|inbox|events?)\b"), "destructive instruction"),
+    (re.compile(r"(?i)\bcancel\s+(every|all|each)\b[^.\n]{0,30}\b(meeting|event|appointment|call)s?\b"), "destructive instruction"),
 ]
 
 _INSTRUCTIONISH = re.compile(
@@ -51,8 +78,14 @@ def scan_for_injection(text: str, *, allow_llm: bool = True) -> InjectionVerdict
         return InjectionVerdict(False, [])
 
     reasons: list[str] = []
+    if _HIDDEN_CHARS.search(text):
+        reasons.append("hidden bidi/zero-width characters")
+
+    # Normalize so fullwidth / homoglyph / letter-spacing tricks don't dodge the
+    # patterns — but scan raw for hidden chars first (normalization strips them).
+    scan_text = _normalize(text)
     for pattern, label in _RULES:
-        if pattern.search(text):
+        if pattern.search(scan_text):
             reasons.append(label)
 
     # de-dupe, keep order
@@ -60,7 +93,7 @@ def scan_for_injection(text: str, *, allow_llm: bool = True) -> InjectionVerdict
     if reasons:
         return InjectionVerdict(True, reasons)
 
-    if allow_llm and _INSTRUCTIONISH.search(text):
+    if allow_llm and _INSTRUCTIONISH.search(scan_text):
         llm_reason = _llm_scan(text)
         if llm_reason:
             return InjectionVerdict(True, [llm_reason])

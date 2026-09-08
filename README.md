@@ -18,9 +18,13 @@ deployable as two containers — see [`docs/deploy.md`](docs/deploy.md).
 - **RAG over your email history**: `Index email history` embeds recent Gmail;
   recall questions ("when does our contract renew?") are answered from the
   index with inline citations back to each message
-- **Prompt-injection guardrails**: every piece of untrusted email text is
-  fenced as data and screened; a detected injection attempt is surfaced and
-  ignored, never acted on. Adversarial eval in `eval/redteam.py`
+- **Prompt-injection defense-in-depth**: the boundary is the approval gate —
+  send / delete / draft always require a human, so an injection in an email
+  body can't cause an action even if nothing detects it. On top of that, every
+  piece of untrusted email text is fenced as data and run through a heuristic
+  screen; a hit is surfaced to the user and bumps the policy decision. The
+  screen is a filter, not the wall — `eval/redteam.py` measures it honestly
+  (near-100% on literal attacks, ~75% on paraphrases, the rest contained)
 - **Policy + approval**: read-only actions run freely; state-changing and
   high-risk actions are gated by an explicit approve/reject step
 - **Multi-user**: "Sign in with Google" (the OAuth grant *is* the login) or a
@@ -150,8 +154,11 @@ timezone/time-parsing helpers, the retrieval store + ingestion, the
 injection/redaction guards, and the whole graph end-to-end (including the
 approve/reject resume, RAG with citations, and a poisoned email being flagged
 rather than obeyed) with a fake LLM, fake embeddings, and fake Google clients.
-`eval/redteam.py` scores the injection screen against a labelled adversarial
-corpus and gates on zero missed attacks.
+`eval/redteam.py` scores the injection screen against three corpora (literal /
+paraphrased / obfuscated attacks + a benign false-positive set) and reports
+per-corpus recall. CI gates only on literal recall and the false-positive rate
+— reworded attacks that slip the filter are *contained* by the approval gate,
+which `test_containment_holds_even_when_the_heuristic_misses` asserts directly.
 
 ## Project structure
 
