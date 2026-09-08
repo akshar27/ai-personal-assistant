@@ -144,7 +144,7 @@ npm run dev                 # http://localhost:3000
 ```bash
 cd backend
 pip install -r requirements-dev.txt
-python -m pytest                    # 120 tests — no network, no API keys, SQLite
+python -m pytest                    # 122 tests — no network, no API keys, SQLite
 python -m eval.run_eval             # LLM eval harness (needs a live model)
 python -m eval.redteam              # prompt-injection screen: precision/recall
 ```
@@ -208,7 +208,7 @@ docker-compose.yml · backend/fly.toml · frontend/fly.toml · render.yaml
 ## Design decisions & tradeoffs
 
 - **One `DATABASE_URL`, two dialects.** SQLite locally and in CI means the test
-  suite stays network- and service-free (120 tests, ~2s); Postgres + pgvector
+  suite stays network- and service-free (122 tests, ~2s); Postgres + pgvector
   in production. `db/` is SQLAlchemy Core + Alembic; `VectorStore` has a
   `SqliteVectorStore` (NumPy cosine — sub-10 ms over one mailbox) and a
   `PgVectorStore` (pgvector + HNSW), picked by URL.

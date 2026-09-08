@@ -23,7 +23,7 @@ Human voice, every claim traceable to code in this repo.
 - Made it multi-user and deployable: "Sign in with Google" (the OAuth grant is
   the login) plus a guest mode, per-user tokens encrypted at rest, durable state
   in Postgres (LangGraph `PostgresSaver`, SQLAlchemy Core + Alembic) with a
-  `DATABASE_URL`-selected SQLite path that keeps the 120-test suite
+  `DATABASE_URL`-selected SQLite path that keeps the 122-test suite
   network-free. Shipped as two Docker images with `docker compose`, Fly.io
   config, and a host-agnostic deploy guide.
 - Replaced a 190-line keyword intent router with a hybrid classifier (keyword
@@ -40,4 +40,4 @@ Human voice, every claim traceable to code in this repo.
   three-corpus adversarial eval.
 - Took it multi-user and production-ready: Google sign-in + guest mode, per-user
   encrypted tokens, durable Postgres state, and a two-container Docker deploy
-  with a 120-test no-network CI.
+  with a 122-test no-network CI.
