@@ -7,6 +7,11 @@ with a **policy layer** that classifies every action by risk and a
 Multi-user (Google sign-in + guest mode), durable state in Postgres, and
 deployable as two containers — see [`docs/deploy.md`](docs/deploy.md).
 
+**Live:** https://ai-assistant-frontend-akshar.fly.dev (backend:
+https://ai-assistant-backend-akshar.fly.dev) — Fly.io + Postgres/pgvector.
+Free-tier machines scale to zero, so the first request after idle takes a
+few seconds to cold-start.
+
 ## Features
 
 - Chat assistant with token streaming (SSE) and an LLM fallback (OpenAI → Ollama)
