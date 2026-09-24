@@ -34,7 +34,7 @@ on the OAuth client. The backend container runs `alembic upgrade head` on start.
 # --- backend ---
 cd backend
 fly launch --no-deploy --copy-config --name ai-assistant-backend
-fly postgres create --name ai-assistant-db --region sjc
+fly postgres create --name ai-assistant-db --region sjc --vm-memory 512
 fly postgres attach ai-assistant-db          # sets DATABASE_URL
 
 fly secrets set \
@@ -84,3 +84,10 @@ the only file that differs between hosts.
 - Conversation state (LangGraph checkpoints), preferences, tasks, encrypted
   Google tokens, and email-history vectors all live in the one Postgres
   database — back that up, not the containers.
+- `fly postgres create`'s default VM is 256MB, which is too tight once the
+  backend actually connects (`app.py` runs `create_all()` at import time,
+  before serving any traffic) — it stopped itself under real load in
+  testing. Sized at `--vm-memory 512` above; if you skip that flag and hit
+  the same thing, `fly machine update <id> --vm-memory 512 --app <db-app>`
+  then `fly machine start <id> --app <db-app>` fixes it without recreating
+  the cluster.
