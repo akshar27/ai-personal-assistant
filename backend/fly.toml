@@ -1,7 +1,7 @@
 # Fly.io config for the backend. Nothing here is app code — the container is a
 # plain Dockerfile and the app is configured entirely through env vars, so any
 # container host works (see docs/deploy.md).
-app = "ai-assistant-backend"
+app = "ai-assistant-backend-akshar"
 primary_region = "sjc"
 
 [build]
